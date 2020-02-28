@@ -2,7 +2,7 @@
 
 **Richards** is a **UG4-Plugin** providing tools for the implementation of Richards equation.
 
-Copyright 2011-2015 Goethe Center for Scientific Computing, University Frankfurt
+Copyright 2019-2020 Goethe Center for Scientific Computing, University Frankfurt
 
 ### Installation ###
 Please install/clone this repository through UG4's package manager
