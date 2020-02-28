@@ -38,22 +38,30 @@
 # Name of your plugin and sources.
 set(pluginName	Richards)
 set(SOURCES		van_genuchten.cpp
-				tests/unit_test.cpp
 				richards_plugin.cpp)
 
-set(SOURCES2	   van_genuchten.cpp
+# 
+set(SOURCES_TEST	   van_genuchten.cpp
 				   tests/unit_test.cpp)
 
-# External libs (JSON, ADOL-C).
+# External libs (JSON).
 include_directories(AFTER 
 	/Users/anaegel/Software/third-party/nlohmann/json/include 
-	/Users/anaegel/adolc_base/include)
+)
 
-# 
-link_directories(/Users/anaegel/adolc_base/lib64)
+# Obsolete now
+# include_directories(AFTER /Users/anaegel/adolc_base/include)
+
+link_directories(${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
 
 # Requires C++ 11.
 set (CMAKE_CXX_STANDARD 11)
+
+
+
+# Avoid linking error: undefined reference to boost::system::system_category()
+add_definitions(-DBOOST_SYSTEM_NO_DEPRECATED)
+# add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 
 ################################################################################
 # The code below doesn't have to be changed (usually)
@@ -61,6 +69,8 @@ set (CMAKE_CXX_STANDARD 11)
 cmake_minimum_required(VERSION 2.6)
 
 project(UG_PLUGIN_${pluginName})
+
+
 
 # Include the definitions and dependencies for ug-plugins.
 include(${UG_ROOT_CMAKE_PATH}/ug_plugin_includes.cmake)
@@ -71,9 +81,10 @@ if(buildEmbeddedPlugins)
 else(buildEmbeddedPlugins)
 	# create a shared library from the sources and link it against ug4.
 	add_library(${pluginName} SHARED ${SOURCES})
-	target_link_libraries (${pluginName} ug4 adolc ConvectionDiffusion)
+	target_link_libraries (${pluginName} ug4 ConvectionDiffusion adolc)
 endif(buildEmbeddedPlugins)
 
 
-add_executable(richards_test ${SOURCES2})
-target_link_libraries (richards_test adolc)
+# Test environment
+add_executable(richards_test ${SOURCES_TEST})
+target_link_libraries (richards_test adolc ug4)
