@@ -45,18 +45,14 @@ set(SOURCES_TEST	   van_genuchten.cpp
 				   tests/unit_test.cpp)
 
 # External libs (JSON).
-include_directories(AFTER 
-	/Users/anaegel/Software/third-party/nlohmann/json/include 
-)
+include_directories(AFTER /Users/anaegel/Software/third-party/nlohmann/json/include)
 
 # Obsolete now
 # include_directories(AFTER /Users/anaegel/adolc_base/include)
-
 link_directories(${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
 
 # Requires C++ 11.
 set (CMAKE_CXX_STANDARD 11)
-
 
 
 # Avoid linking error: undefined reference to boost::system::system_category()
@@ -84,6 +80,7 @@ else(buildEmbeddedPlugins)
 	target_link_libraries (${pluginName} ug4 ConvectionDiffusion adolc)
 endif(buildEmbeddedPlugins)
 
+add_dependencies(${pluginName} adolc)
 
 # Test environment
 add_executable(richards_test ${SOURCES_TEST})

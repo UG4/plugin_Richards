@@ -38,7 +38,7 @@ public:
 
 
 	RichardsElemDisc (const char *functions, const char* subsets)
-	: base_type(functions, subsets)
+	: base_type(functions, subsets), m_spTotalConductivity(SPNULL)
 	{
 		// m_exDarcyVel = make_sp(new DataExport<MathVector<dim>, dim>(functions));
 		// m_exStorage = make_sp(new DataExport<number, dim>(functions));
@@ -63,6 +63,12 @@ public:
 		this->set_diffusion(0.0);
 	}
 
+	SmartPtr<TNumberData> get_conductivity_data() {return m_spTotalConductivity;}
+	void set_conductivity_data(SmartPtr<TNumberData> myCond)
+	{
+		m_spTotalConductivity = myCond;
+	}
+
 
 protected:
 	///	Export for the Darcy velocity
@@ -70,6 +76,9 @@ protected:
 
 	///	Export for the brine mass fraction
 	SmartPtr<TNumberData> m_spStorage;
+
+	/// Export for absolute conductivity
+	SmartPtr<TNumberData> m_spTotalConductivity;
 
 };
 
@@ -100,28 +109,45 @@ public:
 	typedef CplUserData<MathVector<dim>, dim> TVectorData;
 	typedef CplUserData<number, dim> TNumberData;
 
-	RichardsElemDiscFactory() {}
+	RichardsElemDiscFactory() :
+		m_spSaturation(SPNULL), m_spRelConductivity(SPNULL), m_spAbsConductivity(SPNULL),  m_functions("h"), m_dGravity(-1.0)
+	{}
 
 	//! Create classic Richards equation
-	SmartPtr<TRichards> create_richards(const char *functions, const char* subsets)
+	SmartPtr<TRichards> create_richards(const char* subsets)
 	{
-		SmartPtr<TRichards> base = make_sp<TRichards> (new TRichards(functions, subsets));
+		SmartPtr<TRichards> base = make_sp<TRichards> (new TRichards(m_functions.c_str(), subsets));
 
 		// Saturation and conductivity are functions of capillary head.
 		SmartPtr<TScaleAddLinkerNumber>  myCapHead = make_sp<TScaleAddLinkerNumber> (new TScaleAddLinkerNumber());
 		myCapHead->add(-1.0, base->value());
 
 		m_spSaturation->set_capillary(myCapHead);
-		m_spConductivity->set_capillary(myCapHead);
+		m_spRelConductivity->set_capillary(myCapHead);
 
 		// Gravity.
 		SmartPtr<TConstUserVector> myGravity = make_sp<TConstUserVector> (new TConstUserVector(0.0));
-		myGravity->set_entry(dim-1, 1.0);
+		myGravity->set_entry(dim-1, -m_dGravity);
 
-		// Flux C*\grad (h + z)
-		SmartPtr<TScaleAddLinkerVector> myFlux = make_sp<TScaleAddLinkerVector> (new TScaleAddLinkerVector());;
-		myFlux->add(m_spConductivity, base->gradient());
-		myFlux->add(m_spConductivity, myGravity);
+		// Conductivity C.
+		SmartPtr<TNumberData> spTotalConductivity;
+		if (m_spAbsConductivity.valid())
+		{
+			auto spLinker = make_sp<TScaleAddLinkerNumber> (new TScaleAddLinkerNumber());
+			spLinker->add(m_spAbsConductivity, m_spRelConductivity);
+			spTotalConductivity = spLinker;
+
+		} else
+		{
+			spTotalConductivity = m_spRelConductivity;
+		}
+		base->set_conductivity_data(spTotalConductivity);
+
+
+		// Flux C*\grad (h + z).
+		SmartPtr<TScaleAddLinkerVector> myFlux = make_sp<TScaleAddLinkerVector> (new TScaleAddLinkerVector());
+		myFlux->add(spTotalConductivity, base->gradient());
+		myFlux->add(spTotalConductivity, myGravity);
 
 		SmartPtr<TScaleAddLinkerVector> myFlux2 = make_sp<TScaleAddLinkerVector> (new TScaleAddLinkerVector());
 		myFlux2->add(-1.0, myFlux);
@@ -129,17 +155,32 @@ public:
 		base->set_flux_data(myFlux2);
 		base->set_storage_data(m_spSaturation);
 
+
 		return base;
 	}
 
+	// Classic Richards
 	void set_saturation(SmartPtr<RichardsSaturation<dim> > data) {m_spSaturation = data;}
-	void set_conductivity(SmartPtr<RichardsConductivity<dim> > data) {m_spConductivity = data;}
+	void set_conductivity(SmartPtr<RichardsConductivity<dim> > data) {m_spRelConductivity = data;}
+
+	// Extensions
+	void set_abs_conductivity(SmartPtr<TNumberData> data) {m_spAbsConductivity = data;}
+
+	void set_function(const char * functions) { m_functions = functions; }
+	void set_gravity(number g) { m_dGravity = g; }
 
 	const char* get_disc_type() {return "fv1";}
 
 protected:
 	SmartPtr<RichardsSaturation<dim> > m_spSaturation;
-	SmartPtr<RichardsConductivity<dim> > m_spConductivity;
+	SmartPtr<RichardsConductivity<dim> > m_spRelConductivity;
+
+
+	SmartPtr<TNumberData> m_spAbsConductivity;
+
+
+	std::string m_functions;
+	number m_dGravity;
 };
 
 }

@@ -160,6 +160,8 @@ static void Domain(Registry& reg, string grp)
 					.add_method("get_storage_data", &T::get_storage_data)
 					.add_method("set_flux_data", &T::set_flux_data)
 					.add_method("get_flux_data", &T::get_flux_data)
+					.add_method("set_conductivity_data", &T::set_conductivity_data)
+					.add_method("get_conductivity_data", &T::get_conductivity_data)
 					// . add_method("set_conductivity", &T::set_conductivity)
 					.set_construct_as_smart_pointer(true);
 
@@ -176,6 +178,9 @@ static void Domain(Registry& reg, string grp)
 						.add_method("create_richards", &T::create_richards)
 						.add_method("set_saturation", &T::set_saturation)
 						.add_method("set_conductivity", &T::set_conductivity)
+						.add_method("set_abs_conductivity", &T::set_abs_conductivity)
+						.add_method("set_function", &T::set_function)
+						.add_method("set_gravity", &T::set_function)
 						.set_construct_as_smart_pointer(true);
 
 					reg.add_class_to_group(name, "RichardsElemDiscFactory", tag);
@@ -231,6 +236,30 @@ static void Dimension(Registry& reg, string grp)
 		reg.add_class_to_group(name, "RichardsConductivity", tag);
 
 	}
+
+	{
+			string name = string("CompositeUserNumber").append(suffix);
+			typedef CompositeUserData<number, dim, void> T;
+			reg.add_class_<T,typename T::base_type>(name, grp)
+				.template add_constructor<void (*)(bool) >("")
+				.add_method("add", &T::add)
+				.set_construct_as_smart_pointer(true);
+
+			reg.add_class_to_group(name, "CompositeUserNumber", tag);
+
+	}
+
+	{
+				string name = string("CompositeUserVector").append(suffix);
+				typedef CompositeUserData<MathVector<dim>, dim, void> T;
+				reg.add_class_<T,typename T::base_type>(name, grp)
+					.template add_constructor<void (*)(bool) >("")
+					.add_method("add", &T::add)
+					.set_construct_as_smart_pointer(true);
+
+				reg.add_class_to_group(name, "CompositeUserVector", tag);
+
+		}
 
 
 }
