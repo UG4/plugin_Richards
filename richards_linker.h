@@ -306,6 +306,85 @@ public:
 };
 
 
+template <int dim>
+class OnSurfaceCondition : public UserData<number, dim, bool>
+{
+
+public:
+	typedef number TData;
+	typedef bool TRet;
+
+	typedef UserData<number, dim, bool> user_data_base_type;
+	typedef MathVector<dim> math_vector_type;
+	typedef UserData<MathVector<dim>, dim> TVectorData;
+
+	OnSurfaceCondition(SmartPtr<TVectorData> spFlux): m_spFlux(spFlux) {};
+	virtual ~OnSurfaceCondition(){}
+
+
+protected:
+	SmartPtr<TVectorData> m_spFlux;
+
+public:
+	///	returns if provided data is continuous over geometric object boundaries
+			bool continuous() const {return true;}
+
+		///	returns if grid function is needed for evaluation
+			 bool requires_grid_fct() const {return false;}
+
+		public:
+		///	returns value for a global position
+			virtual TRet operator() (TData& value,
+									 const MathVector<dim>& globIP,
+									 number time, int si) const
+			{
+				math_vector_type fluxVec;
+				m_spFlux->operator()(fluxVec, globIP, time, si);
+			//	return m_spFlux->operator(value);
+				value = 47.11;
+				return (fluxVec[dim]>0) ? true : false;
+			}
+
+		///	returns values for global positions
+			virtual void operator()(TData vValue[],
+									const MathVector<dim> vGlobIP[],
+									number time, int si, const size_t nip) const
+			{}
+
+			virtual void operator()(TData vValue[],
+				                        const MathVector<dim> vGlobIP[],
+				                        number time, int si,
+				                        GridObject* elem,
+				                        const MathVector<dim> vCornerCoords[],
+				                        const MathVector<1> vLocIP[],
+				                        const size_t nip,
+				                        LocalVector* u,
+				                        const MathMatrix<1, dim>* vJT = NULL) const
+			{}
+
+				virtual void operator()(TData vValue[],
+				                        const MathVector<dim> vGlobIP[],
+				                        number time, int si,
+				                        GridObject* elem,
+				                        const MathVector<dim> vCornerCoords[],
+				                        const MathVector<2> vLocIP[],
+				                        const size_t nip,
+				                        LocalVector* u,
+				                        const MathMatrix<2, dim>* vJT = NULL) const
+				                        {}
+
+				virtual void operator()(TData vValue[],
+				                        const MathVector<dim> vGlobIP[],
+				                        number time, int si,
+				                        GridObject* elem,
+				                        const MathVector<dim> vCornerCoords[],
+				                        const MathVector<3> vLocIP[],
+				                        const size_t nip,
+				                        LocalVector* u,
+				                        const MathMatrix<3, dim>* vJT = NULL) const
+				{}
+
+};
 // TODO: Should be replaced!
 //! Returns relative permeability of VanGenuchtenModel
 /* struct RelativePermeabilityAdapter

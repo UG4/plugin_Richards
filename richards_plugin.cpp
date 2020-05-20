@@ -237,6 +237,20 @@ static void Dimension(Registry& reg, string grp)
 
 	}
 
+	{
+		string name = string("OnSurfaceCondition").append(suffix);
+		typedef OnSurfaceCondition<dim> T;
+		typedef typename T::user_data_base_type TUserData;
+
+		reg.add_class_<T,TUserData>(name, grp)
+		   .template add_constructor<void (*)(SmartPtr<typename T::TVectorData>) >("")
+				// 	.add_method("set_capillary", &T::set_capillary)
+		   .set_construct_as_smart_pointer(true);
+
+		reg.add_class_to_group(name, "OnSurfaceCondition", tag);
+
+	}
+
 }
 
 /**
@@ -292,6 +306,8 @@ static void Common(Registry& reg, string grp)
 			.add_method("create", &T::create)
 			.set_construct_as_smart_pointer(true);
 	}
+
+
 
 }
 
