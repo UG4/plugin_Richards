@@ -1,8 +1,8 @@
 =====================================
 The Richards' plugin for UG4
 =====================================
- Richards' plugin: Implements the Richards' equation as a UG4 plugin
- Copyright (C) 2019-2020  Arne Naegel, Goethe Center for Scientific Computing, University Frankfurt
+ Richards' plugin: Implements the Richards' equation as a UG4 plugin.
+ Copyright (C) 2019-2020  Goethe Center for Scientific Computing, University Frankfurt, Arne Naegel
  
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
