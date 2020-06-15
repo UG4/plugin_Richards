@@ -147,9 +147,9 @@ class RichardsLinker
 			// UG_LOG("RichardsLinker::eval_and_deriv: " << std::endl);
 
 			// Checks.
-			UG_ASSERT(s >=0, "Huhh: Requires non-negatice s");
-			UG_ASSERT(s < m_spCapillary->num_series(), "Huhh: Requires data m_spCapillary!");
-			UG_ASSERT(s < m_spDCapillary->num_series(), "Huhh: Requires data m_spCapillary!");
+			UG_ASSERT(s >=0, "Huhh: Requires non-negative s");
+			UG_ASSERT(static_cast<size_t>(s) < m_spCapillary->num_series(), "Huhh: Requires data m_spCapillary!");
+			UG_ASSERT(static_cast<size_t>(s)  < m_spDCapillary->num_series(), "Huhh: Requires data m_spCapillary!");
 			/*UG_ASSERT(nip == m_spDCapillary->num_ip(s), "Huhh: Requires data m_spCapillary:"
 								<< nip << "!=" << m_spCapillary->num_ip(s));
 
