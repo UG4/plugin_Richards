@@ -45,7 +45,7 @@ set(SOURCES_TEST	   van_genuchten.cpp
 				   tests/unit_test.cpp)
 
 # External libs (JSON).
-include_directories(AFTER /Users/anaegel/Software/third-party/nlohmann/json/include)
+include_directories(AFTER ${CMAKE_CURRENT_SOURCE_DIR}/../../externals/JSONForUG4/json-cxx/single_include)
 
 # Obsolete now
 # include_directories(AFTER /Users/anaegel/adolc_base/include)
