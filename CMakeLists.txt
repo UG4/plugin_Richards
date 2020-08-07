@@ -35,42 +35,41 @@
 # Simply specify the plugins name and a list of your source files.
 ################################################################################
 
+cmake_minimum_required(VERSION 2.6)
+
+project(UG_PLUGIN_${pluginName})
+
+# Include the definitions and dependencies for ug-plugins.
+include(${UG_ROOT_CMAKE_PATH}/ug_plugin_includes.cmake)
+
+
 # Name of your plugin and sources.
 set(pluginName	Richards)
+
+# Library.
 set(SOURCES		van_genuchten.cpp
 				richards_plugin.cpp)
 
-# 
-set(SOURCES_TEST	   van_genuchten.cpp
+# Unit tests.
+set(SOURCES_TEST	van_genuchten.cpp
 				   tests/unit_test.cpp)
 
-# External libs (JSON).
-include_directories(AFTER /home/tim/UG4/externals/JSONForUG4/json-cxx/single_include)
 
-# Obsolete now
-include_directories(AFTER /home/tim/UG4/externals/plugin_ADTools/include)
-link_directories(${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
+# Dependencies: JSON, ADOL-C
+include_directories(AFTER ${UG_ROOT_PATH}/externals/JSONForUG4/json-cxx/single_include)  # JSON
 
-# Requires C++ 11.
+# include_directories(AFTER /Users/anaegel/adolc_base/include)
+link_directories(${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})   # ADOL-C
+
+
+# The plugin requires C++ 11.
 set (CMAKE_CXX_STANDARD 11)
-
 
 # Avoid linking error: undefined reference to boost::system::system_category()
 add_definitions(-DBOOST_SYSTEM_NO_DEPRECATED)
 # add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 
-################################################################################
-# The code below doesn't have to be changed (usually)
-################################################################################
-cmake_minimum_required(VERSION 2.6)
-
-project(UG_PLUGIN_${pluginName})
-
-
-
-# Include the definitions and dependencies for ug-plugins.
-include(${UG_ROOT_CMAKE_PATH}/ug_plugin_includes.cmake)
-
+# 
 if(buildEmbeddedPlugins)
 	# add the sources to ug4's sources
 	EXPORTSOURCES(${CMAKE_CURRENT_SOURCE_DIR} ${SOURCES})
@@ -80,8 +79,10 @@ else(buildEmbeddedPlugins)
 	target_link_libraries (${pluginName} ug4 ConvectionDiffusion adolc)
 endif(buildEmbeddedPlugins)
 
+# Dependencies.
 add_dependencies(${pluginName} adolc)
 
-# Test environment
+
+# Test environment (OPTIONAL).
 add_executable(richards_test ${SOURCES_TEST})
 target_link_libraries (richards_test adolc ug4)
