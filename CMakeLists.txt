@@ -45,10 +45,10 @@ set(SOURCES_TEST	   van_genuchten.cpp
 				   tests/unit_test.cpp)
 
 # External libs (JSON).
-include_directories(AFTER /Users/anaegel/Software/third-party/nlohmann/json/include)
+include_directories(AFTER /home/tim/UG4/externals/JSONForUG4/json-cxx/single_include)
 
 # Obsolete now
-# include_directories(AFTER /Users/anaegel/adolc_base/include)
+include_directories(AFTER /home/tim/UG4/externals/plugin_ADTools/include)
 link_directories(${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
 
 # Requires C++ 11.

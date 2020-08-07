@@ -290,7 +290,7 @@ static void Common(Registry& reg, string grp)
 	   	 string name = string("VanGenuchtenModel");
 	   	 typedef VanGenuchtenModel T;
 	   	 reg.add_class_<T>(name, grp)
-			//.template add_constructor<void (*)() >("")
+			.add_constructor<void (*)(const char*) >("json-string containing the parameters", "", "", "")
 			.add_method("config_string", &T::config_string)
 		    .add_method("saturation", &T::Saturation)
 			.add_method("saturation_deriv", &T::dSaturation_dH)

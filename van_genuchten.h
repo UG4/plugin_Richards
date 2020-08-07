@@ -23,7 +23,7 @@
 // UG4 lib.
 #include "common/util/smart_pointer.h"
 #include "common/assert.h"
-
+#include "registry/class.h"
 
 
 namespace ug{
@@ -79,10 +79,10 @@ protected:
 
 inline void UGCheckValues(const adouble &val)
 {
-	if (!isnormal(val.getValue()))
+	if (!std::isnormal(val.getValue()))
 		UG_ASSERT(isnormal(val.getValue()), "Value is not bounded");
 
-	if (!isfinite(*(val.getADValue())) )
+	if (!std::isfinite(*(val.getADValue())) )
 		UG_ASSERT(isfinite(*(val.getADValue())), "Derivative is not bounded");
 
 	UG_ASSERT(!isnan(val.getValue()), "Value is not bounded");
@@ -90,9 +90,17 @@ inline void UGCheckValues(const adouble &val)
 }
 
 /// Implements a van Genuchten model.
-class VanGenuchtenModel
+class VanGenuchtenModel : public bridge::JSONConstructible
 {
 public:
+
+	VanGenuchtenModel(const char* json)
+	{
+		nlohmann::json j = nlohmann::json::parse(json);
+		VanGenuchtenParameters p = j.get<VanGenuchtenParameters>();
+		this->m_param = p;
+	}
+
 	VanGenuchtenModel(const VanGenuchtenParameters &p) : m_param(p)
 	{}
 
