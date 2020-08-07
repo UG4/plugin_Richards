@@ -58,7 +58,7 @@ set(SOURCES_TEST	van_genuchten.cpp
 # Dependencies: JSON, ADOL-C
 include_directories(AFTER ${UG_ROOT_PATH}/externals/JSONForUG4/json-cxx/single_include)  # JSON
 
-# include_directories(AFTER /Users/anaegel/adolc_base/include)
+include_directories(AFTER ${UG_ROOT_PATH}/externals/plugin_ADTools/include)
 link_directories(${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})   # ADOL-C
 
 

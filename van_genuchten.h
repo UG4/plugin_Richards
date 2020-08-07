@@ -90,7 +90,7 @@ inline void UGCheckValues(const adouble &val)
 }
 
 /// Implements a van Genuchten model.
-class VanGenuchtenModel : public bridge::JSONConstructible
+class VanGenuchtenModel// : public bridge::JSONConstructible
 {
 public:
 
