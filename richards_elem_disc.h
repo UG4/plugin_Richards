@@ -36,7 +36,7 @@ public:
 	typedef SmartPtr<CplUserData<number, dim> > NumberExport;
 	typedef SmartPtr<CplUserData<MathVector<dim>, dim> > VectorExport;
 
-
+	/// CTOR
 	RichardsElemDisc (const char *functions, const char* subsets)
 	: base_type(functions, subsets), m_spTotalConductivity(SPNULL)
 	{
@@ -45,7 +45,7 @@ public:
 	}
 
 
-	///	returns the export of storage terms
+	///	the export of storage terms
 	SmartPtr<TNumberData> get_storage_data() {return m_spStorage;}
 	void set_storage_data(SmartPtr<TNumberData> storage) {
 		m_spStorage = storage;
@@ -63,6 +63,7 @@ public:
 		this->set_diffusion(0.0);
 	}
 
+	/// conductivity
 	SmartPtr<TNumberData> get_conductivity_data() {return m_spTotalConductivity;}
 	void set_conductivity_data(SmartPtr<TNumberData> myCond)
 	{
@@ -92,6 +93,9 @@ void SelectVTKData(SmartPtr<VTKOutput<TDomain::dim> > spVtk, SmartPtr<RichardsEl
 	spVtk->select_element(spElemDisc->get_storage_data().template cast_static<TUserDataNumber> (), std::string("saturation").append(myTag).c_str());
 };
 
+
+
+///! Factory for creating elem discs.
 template <typename TDomain>
 class RichardsElemDiscFactory
 {
@@ -110,12 +114,14 @@ public:
 	typedef CplUserData<number, dim> TNumberData;
 
 	RichardsElemDiscFactory() :
-		m_spSaturation(SPNULL), m_spRelConductivity(SPNULL), m_spAbsConductivity(SPNULL),  m_functions("h"), m_dGravity(-1.0)
+		m_spSaturation(SPNULL), m_spRelConductivity(SPNULL), m_spAbsConductivity(SPNULL),
+		m_functions("h"), m_dGravity(-1.0)
 	{}
 
-	//! Create classic Richards equation
+	//! Create classic Richards equation.
 	SmartPtr<TRichards> create_richards(const char* subsets)
 	{
+		//! Create elem disc.
 		SmartPtr<TRichards> base = make_sp<TRichards> (new TRichards(m_functions.c_str(), subsets));
 
 		// Saturation and conductivity are functions of capillary head.
@@ -129,17 +135,18 @@ public:
 		SmartPtr<TConstUserVector> myGravity = make_sp<TConstUserVector> (new TConstUserVector(0.0));
 		myGravity->set_entry(dim-1, -m_dGravity);
 
-		// Conductivity C.
+		// Conductivity C=Cabs*Crel.
 		SmartPtr<TNumberData> spTotalConductivity;
+		SmartPtr<TNumberData> spRelConductivity = m_spRelConductivity.template cast_dynamic<TNumberData> ();
 		if (m_spAbsConductivity.valid())
 		{
 			auto spLinker = make_sp<TScaleAddLinkerNumber> (new TScaleAddLinkerNumber());
-			spLinker->add(m_spAbsConductivity, m_spRelConductivity);
+			spLinker->add(m_spAbsConductivity, spRelConductivity);
 			spTotalConductivity = spLinker;
 
 		} else
 		{
-			spTotalConductivity = m_spRelConductivity;
+			spTotalConductivity = m_spRelConductivity.template cast_dynamic<typename TRichards::TNumberData> ();
 		}
 		base->set_conductivity_data(spTotalConductivity);
 
@@ -153,17 +160,23 @@ public:
 		myFlux2->add(-1.0, myFlux);
 
 		base->set_flux_data(myFlux2);
-		base->set_storage_data(m_spSaturation);
+		base->set_storage_data(m_spSaturation.template cast_dynamic<typename TRichards::TNumberData> ());
+		UG_ASSERT(m_spSaturation.template cast_dynamic<typename TRichards::TNumberData> ().valid(),
+				 "Error: Failed to interprete saturation as number data!")
 
 
 		return base;
 	}
 
-	// Classic Richards
-	void set_saturation(SmartPtr<RichardsSaturation<dim> > data) {m_spSaturation = data;}
-	void set_conductivity(SmartPtr<RichardsConductivity<dim> > data) {m_spRelConductivity = data;}
+	// Classic Richards.
+	typedef IRichardsLinker<dim> TSaturation;
+	typedef IRichardsLinker<dim> TConductivity;
+	//typedef typename RichardsConductivity<dim>::richards_base_type TConductivity;
 
-	// Extensions
+	void set_saturation(SmartPtr<TSaturation> data) {m_spSaturation = data;}
+	void set_conductivity(SmartPtr<TConductivity> data) {m_spRelConductivity = data;}
+
+	// Extensions.
 	void set_abs_conductivity(SmartPtr<TNumberData> data) {m_spAbsConductivity = data;}
 
 	void set_function(const char * functions) { m_functions = functions; }
@@ -172,12 +185,10 @@ public:
 	const char* get_disc_type() {return "fv1";}
 
 protected:
-	SmartPtr<RichardsSaturation<dim> > m_spSaturation;
-	SmartPtr<RichardsConductivity<dim> > m_spRelConductivity;
-
+	SmartPtr<TSaturation> m_spSaturation;
+	SmartPtr<TConductivity> m_spRelConductivity;
 
 	SmartPtr<TNumberData> m_spAbsConductivity;
-
 
 	std::string m_functions;
 	number m_dGravity;

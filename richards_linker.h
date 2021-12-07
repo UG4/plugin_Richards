@@ -35,9 +35,12 @@
 
 // UG4
 #include "lib_disc/spatial_disc/user_data/linker/linker.h"
+#include "lib_disc/spatial_disc/user_data/const_user_data.h"
 
 // Plugin
 #include "van_genuchten.h"
+
+#include "json_basics.hh"
 
 namespace ug{
 namespace Richards{
@@ -73,15 +76,33 @@ class Lucas1 : public LucasBase{
 // Richards linker
 ////////////////////////////////////////////////////////////////////////////////
 
-//! Prototype for a vanGenuchten Linker
+//! This is a 'dummy' base class. It indicates a pressure dependent linker.
+template <int dim>
+struct IRichardsLinker
+{
+	IRichardsLinker() : m_spCapillary(NULL), m_spDCapillary(NULL) {};
+	virtual ~IRichardsLinker(){};
+
+	SmartPtr<CplUserData<number, dim> > m_spCapillary;
+	SmartPtr<DependentUserData<number, dim> > m_spDCapillary;
+
+	virtual void set_capillary(SmartPtr<CplUserData<number, dim> > data) = 0;
+	//virtual SmartPtr<CplUserData<number, dim> > as_user_data() {return SPNULL;}
+
+};
+
+//! Prototype of a linker. Returns values depending on the Functor class.
 template <int dim, class TFunctor>
 class RichardsLinker
-	: public StdDataLinker< RichardsLinker<dim, TFunctor>, number, dim>
+	: public StdDataLinker< RichardsLinker<dim, TFunctor>, number, dim>,
+	  public IRichardsLinker<dim>
 {
+public:
 	///	Base class type
 		typedef StdDataLinker< RichardsLinker<dim, TFunctor>, number, dim> base_type;
 		typedef number data_type;
 		typedef typename TFunctor::TModel TModel;
+		typedef IRichardsLinker<dim> richards_base_type;
 
 		enum inputs { _H_=0, _SIZE_};
 
@@ -90,7 +111,7 @@ class RichardsLinker
 		typedef typename base_type::base_type user_data_base_type;
 
 		RichardsLinker(const TModel &model) :
-			m_spCapillary(NULL), m_spDCapillary(NULL), m_model(model)
+			richards_base_type(), m_model(model)
 		{
 			//	this linker needs exactly one input
 			this->set_num_input(_SIZE_);
@@ -105,7 +126,7 @@ class RichardsLinker
 		// 	UG_LOG("RichardsLinker::evaluate1: " << std::endl);
 			number cap;
 			double dummy;
-			(*m_spCapillary)(cap, globIP, time, si);
+			(*richards_base_type::m_spCapillary)(cap, globIP, time, si);
 			TFunctor::get_func_values(m_model, &cap, &value, &dummy, 1);
 		}
 
@@ -122,7 +143,7 @@ class RichardsLinker
 		{
 		// 	UG_LOG("RichardsLinker::evaluate2: " << std::endl);
 			number vCapVal[nip];
-			(*m_spCapillary)(&vCapVal[0], vGlobIP, time, si,
+			(*richards_base_type::m_spCapillary)(&vCapVal[0], vGlobIP, time, si,
 								elem, vCornerCoords, vLocIP, nip, u, vJT);
 
 			number vdSdH[nip]; // dummies
@@ -146,10 +167,11 @@ class RichardsLinker
 		{
 			// UG_LOG("RichardsLinker::eval_and_deriv: " << std::endl);
 
+
 			// Checks.
 			UG_ASSERT(s >=0, "Huhh: Requires non-negative s");
-			UG_ASSERT(static_cast<size_t>(s) < m_spCapillary->num_series(), "Huhh: Requires data m_spCapillary!");
-			UG_ASSERT(static_cast<size_t>(s)  < m_spDCapillary->num_series(), "Huhh: Requires data m_spCapillary!");
+			UG_ASSERT(static_cast<size_t>(s) < richards_base_type::m_spCapillary->num_series(), "Huhh: Requires data m_spCapillary!");
+			UG_ASSERT(static_cast<size_t>(s)  < richards_base_type::m_spDCapillary->num_series(), "Huhh: Requires data m_spCapillary!");
 			/*UG_ASSERT(nip == m_spDCapillary->num_ip(s), "Huhh: Requires data m_spCapillary:"
 								<< nip << "!=" << m_spCapillary->num_ip(s));
 
@@ -157,7 +179,7 @@ class RichardsLinker
 					<< nip << "!=" << m_spCapillary->num_ip(s));*/
 
 			//	Get the data from ip series.
-			const number* vH = m_spCapillary->values(s);
+			const number* vH = richards_base_type::m_spCapillary->values(s);
 			number vdSdH[nip];
 			TFunctor::get_func_values(m_model, vH, vValue, vdSdH, nip);
 
@@ -171,16 +193,16 @@ class RichardsLinker
 			this->set_zero(vvvDeriv, nip);
 
 			//	Derivatives w.r.t height
-			if( m_spDCapillary.valid() && !m_spDCapillary->zero_derivative())
+			if( richards_base_type::m_spDCapillary.valid() && !richards_base_type::m_spDCapillary->zero_derivative())
 			{
 
 
 
 			for(size_t ip = 0; ip < nip; ++ip)
-				for(size_t fct = 0; fct < m_spDCapillary->num_fct(); ++fct)
+				for(size_t fct = 0; fct < richards_base_type::m_spDCapillary->num_fct(); ++fct)
 				{
 				//	get derivative of  w.r.t. to all functions
-					const number* vDHeight = m_spDCapillary->deriv(s, ip, fct);
+					const number* vDHeight = richards_base_type::m_spDCapillary->deriv(s, ip, fct);
 
 				//	get common fct id for this function
 					const size_t commonFct = this->input_common_fct(_H_, fct);
@@ -207,103 +229,199 @@ class RichardsLinker
 		}
 
 	public:
-	///	set height import
+		//!	Implements IRichardsLinker interface.
 		void set_capillary(SmartPtr<CplUserData<number, dim> > data)
 		{
-			m_spCapillary = data;  // for evaluation
-			m_spDCapillary = data.template cast_dynamic<DependentUserData<number, dim> >(); // for derivatives
+			richards_base_type::m_spCapillary = data;  // for evaluation
+			richards_base_type::m_spDCapillary = data.template cast_dynamic<DependentUserData<number, dim> >(); // for derivatives
 			base_type::set_input(_H_, data, data);
 		}
 
+	public:
 		TModel& model() { return m_model; }
 		const TModel& model() const { return m_model; }
 
 	protected:
-		///	import for height
-		SmartPtr<CplUserData<number, dim> > m_spCapillary;
-		SmartPtr<DependentUserData<number, dim> > m_spDCapillary;
-
-		TModel m_model;
+		TModel m_model; //! The underlying model.
 };
 
 
-//! Returns saturations of VanGenuchtenModel
+//! Returns saturations.
+template <typename M>
 struct SaturationAdapter
 {
-	typedef VanGenuchtenModel TModel;
+	typedef M TModel;
 	static void get_func_values(const TModel &model, const double *h, double *s, double *dsdh, size_t n)
 	{ model.get_saturations(h, s, dsdh, n); }
-
 };
 
-template <int dim>
-class RichardsSaturation : public RichardsLinker<dim,SaturationAdapter>
-{
-public:
-	typedef RichardsLinker<dim,SaturationAdapter> base_type;
-	RichardsSaturation(const typename SaturationAdapter::TModel &model) : RichardsLinker<dim,SaturationAdapter> (model)
-	{}
-};
-
-
-//! Returns conductivities of VanGenuchtenModel
+//! Returns conductivities (note: corresponds to relative permeability, iff Ksat=1.0).
+template <typename M>
 struct ConductivityAdapter
 {
-	typedef VanGenuchtenModel TModel;
-	static void get_func_values(const TModel &model, const double *h, double *k, double *dkdh, size_t n)
+	typedef M TModel;
+	static void get_func_values(const M& model, const double *h, double *k, double *dkdh, size_t n)
 	{ model.get_conductivities(h, k, dkdh, n);}
 };
 
 
+//! Shortcuts for van Genuchten
+typedef SaturationAdapter<VanGenuchtenModel> vanGenuchtenSaturationAdapter;
+typedef ConductivityAdapter<VanGenuchtenModel> vanGenuchtenConductivityAdapter;
+
+// TODO: We could define the following classes as follows:
 template <int dim>
-class RichardsConductivity : public RichardsLinker<dim,ConductivityAdapter>
+using RichardsSaturation2 = RichardsLinker<dim,vanGenuchtenSaturationAdapter>;
+
+//! van Genuchten classes. (ideally, those could be type-def'ed as well..)
+template <int dim>
+struct RichardsSaturation : public RichardsLinker<dim,vanGenuchtenSaturationAdapter>
 {
-public:
-	typedef RichardsLinker<dim,ConductivityAdapter> base_type;
-	RichardsConductivity(const typename ConductivityAdapter::TModel &model) : RichardsLinker<dim,ConductivityAdapter> (model)
-	{}
+	typedef RichardsLinker<dim,vanGenuchtenSaturationAdapter> base_type;
+	RichardsSaturation(const typename base_type::TModel &model) : base_type (model) {}
+};
+
+template <int dim>
+struct RichardsConductivity : public RichardsLinker<dim, vanGenuchtenConductivityAdapter>
+{
+	typedef RichardsLinker<dim,vanGenuchtenConductivityAdapter > base_type;
+	RichardsConductivity(const typename base_type::TModel &model) : base_type(model) {}
 };
 
 
 
 
-
-
-//! Returns saturations of Gardner
-struct GardnerSaturationAdapter
-{
-	typedef GardnerModel TModel;
-	static void get_func_values(const TModel &model, const double *h, double *s, double *dsdh, size_t n)
-	{ model.get_saturations(h, s, dsdh, n); }
-};
+//! Gardner
+typedef SaturationAdapter<GardnerModel> GardnerSaturationAdapter;
+typedef ConductivityAdapter<GardnerModel> GardnerConductivityAdapter;
 
 template <int dim>
 class GardnerSaturation : public RichardsLinker<dim,GardnerSaturationAdapter>
 {
 public:
 	typedef RichardsLinker<dim,GardnerSaturationAdapter> base_type;
-	GardnerSaturation(const typename GardnerSaturationAdapter::TModel &model) : RichardsLinker<dim,SaturationAdapter> (model)
-	{}
+	GardnerSaturation(const typename base_type::TModel &model) : base_type(model) {}
 };
-
-
-//! Returns conductivities of Gardner
-struct GardnerConductivityAdapter
-{
-	typedef GardnerModel TModel;
-	static void get_func_values(const TModel &model, const double *h, double *k, double *dkdh, size_t n)
-	{ model.get_conductivities(h, k, dkdh, n);}
-};
-
 
 template <int dim>
 class GardnerConductivity : public RichardsLinker<dim,GardnerConductivityAdapter>
 {
 public:
 	typedef RichardsLinker<dim,GardnerConductivityAdapter> base_type;
-	GardnerConductivity(const typename GardnerConductivityAdapter::TModel &model) : RichardsLinker<dim,GardnerConductivityAdapter> (model)
-	{}
+	GardnerConductivity(const typename base_type::TModel &model) : base_type (model) {}
 };
+
+//! Haverkamp
+typedef SaturationAdapter<HaverkampModel> HaverkampSaturationAdapter;
+typedef ConductivityAdapter<HaverkampModel> HaverkampConductivityAdapter;
+
+template <int dim>
+class HaverkampSaturation : public RichardsLinker<dim,HaverkampSaturationAdapter>
+{
+public:
+	typedef RichardsLinker<dim,HaverkampSaturationAdapter> base_type;
+	HaverkampSaturation(const typename base_type::TModel &model) : base_type(model) {}
+};
+
+template <int dim>
+class HaverkampConductivity : public RichardsLinker<dim,HaverkampConductivityAdapter>
+{
+public:
+	typedef RichardsLinker<dim,HaverkampConductivityAdapter> base_type;
+	HaverkampConductivity(const typename base_type::TModel &model) : base_type (model) {}
+};
+
+
+#ifdef UG_JSON
+
+// Factory function. Construct UserData from JSONPointers.
+template <int dim>
+class UserDataFactory {
+
+public:
+	typedef CplUserData<number, dim> TUserDataNumber;
+
+	UserDataFactory(JSONType &jbase) : m_jbase(jbase)
+	{}
+
+	//! Base class.
+	UserDataFactory(const std::string &jstring)
+	{ m_jbase = nlohmann::json::parse(jstring); }
+
+	//! This function constructs an object.
+	SmartPtr<TUserDataNumber> create(const std::string &jstring)
+	{
+		JSONType j = nlohmann::json::parse(jstring);
+		return create_from_json(j);
+	}
+
+	SmartPtr<TUserDataNumber> create_from_json(JSONType &jobject)
+	{
+		SmartPtr<TUserDataNumber> inst = SPNULL;
+
+		// assigned a number: obj = 1.0
+		if (jobject.is_number())
+		{
+			double val;
+			jobject.get_to(val);
+			return make_sp(new ConstUserNumber<dim>(val));
+		}
+
+		// assigned an object; obj = { type = "ObjectType", value = "/gggf/"}
+		if (jobject.is_object())
+		{
+				auto jtype = jobject.at("type");
+				auto jvalue = jobject.at("value");
+				// auto jref = jobject.at("ref");
+
+				std::cout << "Found  " << jvalue << jtype << std::endl;
+
+				// We identify by string
+				if (!jtype.is_string()) return inst; // =SPNULL
+
+				// Found a string starting with @ => look up as JSON pointer
+				std::string mystring;
+				jtype.get_to(mystring);
+
+				// using json_pointer = nlohmann::json::json_pointer;
+				std::cout << "Found  " << mystring << jtype << std::endl;
+				if (std::string("RichardsSaturation").compare(mystring))
+				{
+					if (!jvalue.is_string()) return inst;
+
+					std::string refstring;
+					jvalue.get_to(refstring);
+
+					std::cout << "Found a string " << jvalue << refstring << std::endl;
+
+					std::cout << "Resolving reference: " << refstring << std::endl;
+					JSONPointer jptr = JSONPointer(refstring);
+
+					// Obtain model from JSON.
+					auto jmodel = m_jbase[jptr];
+					std::cout << "Found: " << jmodel << std::endl;
+
+
+
+				}
+
+		}
+
+
+
+		return inst;
+	}
+
+protected:
+	 // this is the parameter map
+	JSONType m_jbase;
+
+};
+
+#endif // UG_JSON
+
+
+
 
 
 template <int dim>
@@ -406,7 +524,106 @@ public:
 */
 
 
+/*
+
+
+template<TUserData>
+SmartPtr<TUserData> CreateUserData(nlohmann::json j, nlohmann::json jparams)
+{
+	SmartPtr<TUserDataNumber> inst = SPNULL;
+	const int dim = TUserData::dim;
+
+	auto jtype = j.at("type");
+	auto jvalue = j.at("value");
+
+
+	if (jtype.is_string())
+	{
+		std::string mystring;
+		jtype.get_to(mystring);
+
+		// JSON: "value" : {"$ref"  : "#/bar"}
+		// LUA value = { "$ref" = "#/bar" }
+
+		if (std::string("RichardsSaturation").compare(mystring))
+		{
+			typedef RichardsSaturation<dim> TRichardsSaturation;
+			typedef typename TRichardsSaturation::parameter_type TParameter;
+			TParameter p;
+
+			make_sp(new TRichardsSaturation(p));
+		}
+
+
+	} else if (jtype.is_number())
+	{
+		double myval;
+		jtype.get_to(myval);
+		inst = make_sp(new ConstUserNumber<dim>(myval));
+	}
+
+	return inst;
+
+};
+
+template <int dim>
+SmartPtr<CplUserData<number, dim> > CreateUserDataNumber(const char *jstring) {
+
+	typedef CplUserData<number, dim> TUserDataNumber;
+
+	SmartPtr<TUserDataNumber> inst = SPNULL;
+	try
+	{
+			nlohmann::json j = nlohmann::json::parse(jstring);
+			VanGenuchtenParameters p = j.get<VanGenuchtenParameters>();
+			inst = make_sp(new VanGenuchtenModel(p));
+	}
+	catch (...)
+	{
+			std::cout << "Construction failed!" << std::endl;
+	}
+	return inst;
+};
+*/
+
+
+
+
 } // namespace Richards
 } // end namespace ug
 
-#endif /* __H__UG__LIB_DISC__SPATIAL_DISC__DARCY_VELOCITY_LINKER__ */
+#ifdef UG_JSON
+namespace nlohmann {
+
+   // Construct RichardsSaturation from JSON
+   template <int dim>
+   struct adl_serializer<ug::Richards::RichardsSaturation<dim> >
+   {
+	   typedef typename ug::Richards::RichardsSaturation<dim> TRichardsLinker;
+	   typedef typename ug::Richards::RichardsSaturation<dim>::model_type TModel;
+
+       static TRichardsLinker from_json(const json& j)
+       { return j.get<TModel>(); } // initialize from model }
+
+       static void to_json(json& j, TRichardsLinker s)
+       { j = s.model(); }
+   };
+
+   // Construct RichardsConductivity from JSON
+   template <int dim>
+     struct adl_serializer<ug::Richards::RichardsConductivity<dim> >
+     {
+  	   typedef typename ug::Richards::RichardsConductivity<dim> TRichardsLinker;
+  	   typedef typename ug::Richards::RichardsConductivity<dim>::model_type TModel;
+
+         static TRichardsLinker from_json(const json& j)
+         { return j.get<TModel>(); } // initialize from model }
+
+         static void to_json(json& j, TRichardsLinker s)
+         { j = s.model(); }
+     };
+};
+#endif
+
+
+#endif /* __H__UG__RICHARDS_PLUGIN__LINKER_H__ */

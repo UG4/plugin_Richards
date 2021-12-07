@@ -35,7 +35,10 @@
 # Simply specify the plugins name and a list of your source files.
 ################################################################################
 
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8.12)
+
+# Name of your plugin and sources.
+set(pluginName	Richards)
 
 project(UG_PLUGIN_${pluginName})
 
@@ -43,16 +46,13 @@ project(UG_PLUGIN_${pluginName})
 include(${UG_ROOT_CMAKE_PATH}/ug_plugin_includes.cmake)
 
 
-# Name of your plugin and sources.
-set(pluginName	Richards)
-
 # Library.
 set(SOURCES		van_genuchten.cpp
 				richards_plugin.cpp)
 
 # Unit tests.
 set(SOURCES_TEST	van_genuchten.cpp
-				   tests/unit_test.cpp)
+					tests/richards_unit_test.cpp)
 
 
 # Dependencies: JSON, ADOL-C
@@ -61,13 +61,11 @@ include_directories(AFTER ${UG_ROOT_PATH}/externals/JSONForUG4/json-cxx/single_i
 include_directories(AFTER ${UG_ROOT_PATH}/externals/plugin_ADTools/include)
 link_directories(${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})   # ADOL-C
 
-
-# The plugin requires C++ 11.
+# This plugin requires C++ 11.
 set (CMAKE_CXX_STANDARD 11)
 
 # Avoid linking error: undefined reference to boost::system::system_category()
 add_definitions(-DBOOST_SYSTEM_NO_DEPRECATED)
-# add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 
 # 
 if(buildEmbeddedPlugins)
@@ -84,5 +82,5 @@ add_dependencies(${pluginName} adolc)
 
 
 # Test environment (OPTIONAL).
-add_executable(richards_test ${SOURCES_TEST})
-target_link_libraries (richards_test adolc ug4)
+# add_executable(richards_test ${SOURCES_TEST})
+# target_link_libraries (richards_test adolc ug4)

@@ -11,13 +11,15 @@
 
 #include "van_genuchten.h"
 
-using namespace ug::Richards;
-
-double VanGenuchtenModel::one = 1.0;
 
 namespace ug {
 namespace Richards {
 
+//////////////////////////////////////////////
+// VanGenuchtenParameters
+//////////////////////////////////////////////
+
+#ifdef UG_JSON
 /// JSON serialize.
 void to_json(JSONType& j, const VanGenuchtenParameters& p) {
 	j = JSONType{{"thetaS", p.thetaS}, {"thetaR", p.thetaR}, {"alpha", p.alpha}, {"n", p.n}, {"Ksat", p.Ksat}};
@@ -48,9 +50,59 @@ void from_json(const JSONType& jobject, VanGenuchtenParameters& p) {
 		auto it = jobject.find("thetaR");
 		if (it != jobject.end()) {it->get_to(p.thetaR);}
 	}
+
+	{
+		p.m =  1.0 - (1.0/p.n);
+		auto it = jobject.find("m");
+		if (it != jobject.end()) {it->get_to(p.m);}
+	}
 }
 
 
+/// JSON serialize.
+void to_json(JSONType& j, const HaverkampParameters& p) {
+	j = JSONType{{"thetaS", p.thetaS}, {"thetaR", p.thetaR}, {"alpha", p.alpha}, {"n", p.n}, {"beta", p.beta}, {"m", p.m}, {"Ksat", p.Ksat}};
+}
+
+
+/// JSON de-serialize.
+void from_json(const JSONType& jobject, HaverkampParameters& p) {
+
+	jobject.at("alpha").get_to(p.alpha);
+	jobject.at("n").get_to(p.n);
+
+	jobject.at("beta").get_to(p.beta);
+	jobject.at("m").get_to(p.m);
+
+     // Optional parameters
+	{
+		p.Ksat = 1.0;
+		auto it = jobject.find("Ksat");
+		if (it != jobject.end()) {it->get_to(p.Ksat);}
+	}
+
+	{
+		p.thetaS = 1.0;
+		auto it = jobject.find("thetaS");
+		if (it != jobject.end()) {it->get_to(p.thetaS);}
+	}
+
+	{
+		p.thetaR = 0.0;
+		auto it = jobject.find("thetaR");
+		if (it != jobject.end()) {it->get_to(p.thetaR);}
+	}
+
+}
+
+//////////////////////////////////////////////
+// VanGenuchtenModel
+//////////////////////////////////////////////
+
+
+
+
+//! Create a map uid -> json
 void CreateJSONMap(const JSONType &array, std::map<std::string, JSONType> &map)
 {
 
@@ -68,29 +120,8 @@ void CreateJSONMap(const JSONType &array, std::map<std::string, JSONType> &map)
 }
 
 
-std::string VanGenuchtenModel::config_string() const {
-	nlohmann::json j2 = m_param;
-	std::stringstream ss;
-	ss << j2;
-	return ss.str();
-}
 
-// Factory function
-SmartPtr<VanGenuchtenModel> CreateVanGenuchtenModel(const char *jstring) {
 
-	SmartPtr<VanGenuchtenModel> inst = SPNULL;
-	try
-	{
-			nlohmann::json j = nlohmann::json::parse(jstring);
-			VanGenuchtenParameters p = j.get<VanGenuchtenParameters>();
-			inst = make_sp(new VanGenuchtenModel(p));
-	}
-	catch (...)
-	{
-			std::cout << "Construction failed!" << std::endl;
-	}
-	return inst;
-};
 
 
 /*SmartPtr<VanGenuchtenModel> VanGenuchtenModelFactory::create_default()
@@ -102,10 +133,20 @@ SmartPtr<VanGenuchtenModel> CreateVanGenuchtenModel(const char *jstring) {
 };
 */
 
-SmartPtr<VanGenuchtenModel> VanGenuchtenModelFactory::create(const char *jstring)
-{
-	return CreateVanGenuchtenModel(jstring);
-};
+//! Factory function.
+SmartPtr<VanGenuchtenModel> CreateVanGenuchtenModel(const char *json)
+{ return CreateModel<VanGenuchtenModel>(json); }
+
+
+
+
+SmartPtr<VanGenuchtenModel> RichardsModelFactory::create_van_genuchten(const char *jstring)
+{ return CreateVanGenuchtenModel(jstring); }
+
+SmartPtr<HaverkampModel> RichardsModelFactory::create_haverkamp(const char *jstring)
+{ return CreateModel<HaverkampModel>(jstring); }
+
+#endif
 
 }
 }

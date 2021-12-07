@@ -41,6 +41,7 @@
 #include "common/ug_config.h"
 #include "common/error.h"
 
+
 #include "van_genuchten.h"
 #include "richards_linker.h"
 #include "richards_elem_disc.h"
@@ -201,41 +202,83 @@ static void Domain(Registry& reg, string grp)
  * @param reg				registry
  * @param parentGroup		group for sorting of functionality
  */
+template <typename T, int dim>
+static void add_user_data(const char* idstring, Registry& reg, const string grp, const string suffix, const string tag)
+{
+	string name = string(idstring).append(suffix);
+	//typedef RichardsSaturation<dim> T;
+	typedef typename T::user_data_base_type TUserData;
+	typedef typename T::base_type::TModel TModel;
+	typedef IRichardsLinker<dim> TCap;
+
+	reg.add_class_<T,TUserData,TCap>(name, grp)
+		.template add_constructor<void (*)(const TModel&) >("")
+		.add_method("set_capillary", &T::set_capillary)
+		.set_construct_as_smart_pointer(true);
+
+	reg.add_class_to_group(name, idstring, tag);
+}
+
 template <int dim>
 static void Dimension(Registry& reg, string grp)
 {
 //	useful defines
 	string suffix = GetDimensionSuffix<dim>();
 	string tag = GetDimensionTag<dim>();
+
 	{
-			 string name = string("RichardsSaturation").append(suffix);
+		// This is an abstract base class for pressure dependent quantities, e.g. saturations.
+		string name = string("IRichardsLinker").append(suffix);
+		typedef IRichardsLinker<dim> T;
+		reg.add_class_<T>(name, grp);
+		reg.add_class_to_group(name, "IRichardsLinker", tag);
+
+	}
+	// user data
+	{
+		// van Genuchten
+			 /*string name = string("RichardsSaturation").append(suffix);
 			 typedef RichardsSaturation<dim> T;
 			 typedef typename T::user_data_base_type TUserData;
-			 typedef VanGenuchtenModel M;
 
 			 reg.add_class_<T,TUserData>(name, grp)
-					.template add_constructor<void (*)(const VanGenuchtenModel&) >("")
+					.template add_constructor<void (*)(const typename T::base_type::TModel&) >("")
 					.add_method("set_capillary", &T::set_capillary)
 					.set_construct_as_smart_pointer(true);
 
-			 reg.add_class_to_group(name, "RichardsSaturation", tag);
+			 reg.add_class_to_group(name, "RichardsSaturation", tag);*/
 
-		}
+		typedef RichardsSaturation<dim> S;
+		add_user_data<S, dim>("RichardsSaturation", reg, grp, suffix, tag);
+
+		typedef RichardsConductivity<dim> C;
+		add_user_data<C, dim>("RichardsConductivity", reg, grp, suffix, tag);
+	}
 
 	{
-		string name = string("RichardsConductivity").append(suffix);
-		typedef RichardsConductivity<dim> T;
-		typedef typename T::user_data_base_type TUserData;
-		typedef VanGenuchtenModel M;
+		// Haverkamp
+		typedef HaverkampSaturation<dim> S;
+		add_user_data<S, dim>("HaverkampSaturation", reg, grp, suffix, tag);
 
-		reg.add_class_<T,TUserData>(name, grp)
-			.template add_constructor<void (*)(const VanGenuchtenModel&) >("")
-			.add_method("set_capillary", &T::set_capillary)
-			.set_construct_as_smart_pointer(true);
-
-		reg.add_class_to_group(name, "RichardsConductivity", tag);
-
+		typedef HaverkampConductivity<dim> C;
+		add_user_data<C, dim>("HaverkampConductivity", reg, grp, suffix, tag);
 	}
+
+
+
+
+#ifdef UG_JSON
+	{
+		string name = string("UserDataFactory").append(suffix);
+		typedef UserDataFactory<dim> T;
+		reg.add_class_<T>(name, grp)
+		.template add_constructor<void (*)(const std::string&) >("")
+		.add_method("create", &T::create)
+		.set_construct_as_smart_pointer(true);
+
+		reg.add_class_to_group(name, "UserDataFactory", tag);
+	}
+#endif
 
 	{
 		string name = string("OnSurfaceCondition").append(suffix);
@@ -244,7 +287,6 @@ static void Dimension(Registry& reg, string grp)
 
 		reg.add_class_<T,TUserData>(name, grp)
 		   .template add_constructor<void (*)(SmartPtr<typename T::TVectorData>) >("")
-				// 	.add_method("set_capillary", &T::set_capillary)
 		   .set_construct_as_smart_pointer(true);
 
 		reg.add_class_to_group(name, "OnSurfaceCondition", tag);
@@ -299,11 +341,24 @@ static void Common(Registry& reg, string grp)
 	}
 
 	{
-		 string name = string("VanGenuchtenModelFactory");
-		 typedef VanGenuchtenModelFactory T;
+	   	 string name = string("HaverkampModel");
+	   	 typedef HaverkampModel T;
+	   	 reg.add_class_<T>(name, grp)
+			.add_constructor<void (*)(const char*) >("json-string containing the parameters", "", "", "")
+			.add_method("config_string", &T::config_string)
+		    .add_method("saturation", &T::Saturation)
+			.add_method("saturation_deriv", &T::dSaturation_dH)
+			.add_method("conductivity", &T::Conductivity)
+	   	 	.add_method("conductivity_deriv", &T::dConductivity_dH);
+	}
+
+	{
+		 string name = string("RichardsModelFactory");
+		 typedef RichardsModelFactory T;
 		 reg.add_class_<T>(name, grp)
 			.template add_constructor<void (*)() >("")
-			.add_method("create", &T::create)
+			.add_method("create_van_genuchten", &T::create_van_genuchten)
+			.add_method("create_haverkamp", &T::create_haverkamp)
 			.set_construct_as_smart_pointer(true);
 	}
 
