@@ -87,7 +87,6 @@ struct IRichardsLinker
 	SmartPtr<DependentUserData<number, dim> > m_spDCapillary;
 
 	virtual void set_capillary(SmartPtr<CplUserData<number, dim> > data) = 0;
-	//virtual SmartPtr<CplUserData<number, dim> > as_user_data() {return SPNULL;}
 
 };
 
@@ -166,20 +165,21 @@ public:
 		                    const MathMatrix<refDim, dim>* vJT = NULL) const
 		{
 			// UG_LOG("RichardsLinker::eval_and_deriv: " << std::endl);
-
+			size_t sid=this->series_id(_H_,s);
 
 			// Checks.
 			UG_ASSERT(s >=0, "Huhh: Requires non-negative s");
-			UG_ASSERT(static_cast<size_t>(s) < richards_base_type::m_spCapillary->num_series(), "Huhh: Requires data m_spCapillary!");
-			UG_ASSERT(static_cast<size_t>(s)  < richards_base_type::m_spDCapillary->num_series(), "Huhh: Requires data m_spCapillary!");
-			/*UG_ASSERT(nip == m_spDCapillary->num_ip(s), "Huhh: Requires data m_spCapillary:"
-								<< nip << "!=" << m_spCapillary->num_ip(s));
+			UG_ASSERT(static_cast<size_t>(sid) < richards_base_type::m_spCapillary->num_series(), "Huhh: Requires data m_spCapillary!");
+			UG_ASSERT(static_cast<size_t>(sid)  < richards_base_type::m_spDCapillary->num_series(), "Huhh: Requires data m_spCapillary!");
+			UG_ASSERT(nip == this->m_spCapillary->num_ip(sid),
+					"Huhh: Requires data m_spCapillary:" << nip << "!=" << this->m_spCapillary->num_ip(sid));
+			UG_ASSERT(nip == this->m_spDCapillary->num_ip(sid),
+					"Huhh: Requires data m_spCapillary:" << nip << "!=" << this->m_spDCapillary->num_ip(sid));
 
-			UG_ASSERT(nip == m_spCapillary->num_ip(s), "Huhh: Requires data m_spCapillary:"
-					<< nip << "!=" << m_spCapillary->num_ip(s));*/
+
 
 			//	Get the data from ip series.
-			const number* vH = richards_base_type::m_spCapillary->values(s);
+			const number* vH = richards_base_type::m_spCapillary->values(sid);
 			number vdSdH[nip];
 			TFunctor::get_func_values(m_model, vH, vValue, vdSdH, nip);
 
@@ -187,7 +187,7 @@ public:
 			// Compute the derivatives at all ips.
 
 			// Check, if something to do.
-			if(!bDeriv || this->zero_derivative()) return;
+			if((!bDeriv) || this->zero_derivative()) return;
 
 			// Clear all derivative values.
 			this->set_zero(vvvDeriv, nip);
@@ -196,18 +196,14 @@ public:
 			if( richards_base_type::m_spDCapillary.valid() && !richards_base_type::m_spDCapillary->zero_derivative())
 			{
 
-
-
 			for(size_t ip = 0; ip < nip; ++ip)
 				for(size_t fct = 0; fct < richards_base_type::m_spDCapillary->num_fct(); ++fct)
 				{
 				//	get derivative of  w.r.t. to all functions
-					const number* vDHeight = richards_base_type::m_spDCapillary->deriv(s, ip, fct);
+					const number* vDHeight = richards_base_type::m_spDCapillary->deriv(sid, ip, fct);
 
 				//	get common fct id for this function
 					const size_t commonFct = this->input_common_fct(_H_, fct);
-
-				//	loop all shapes and set the derivative
 
 					if (this->num_sh(commonFct) == nip)
 					{
