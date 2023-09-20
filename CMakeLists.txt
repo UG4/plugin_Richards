@@ -55,30 +55,32 @@ set(SOURCES_TEST	van_genuchten.cpp
 					tests/richards_unit_test.cpp)
 
 
-# Dependencies: JSON, ADOL-C
+# Dependencies: JSON, autodiff
 include_directories(AFTER ${UG_ROOT_PATH}/externals/JSONForUG4/json-cxx/single_include)  # JSON
 
-include_directories(AFTER ${UG_ROOT_PATH}/externals/plugin_ADTools/include)
-link_directories(${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})   # ADOL-C
+# include_directories(AFTER ${UG_ROOT_PATH}/externals/plugin_ADTools/include)
+include_directories(AFTER ${UG_ROOT_PATH}/plugins/autodiff)
+# link_directories(${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})   # ADOL-C
 
 # This plugin requires C++ 11.
-set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD 17)
 
 # Avoid linking error: undefined reference to boost::system::system_category()
-add_definitions(-DBOOST_SYSTEM_NO_DEPRECATED)
+# add_definitions(-DBOOST_SYSTEM_NO_DEPRECATED)
 
-# 
+
 if(buildEmbeddedPlugins)
 	# add the sources to ug4's sources
 	EXPORTSOURCES(${CMAKE_CURRENT_SOURCE_DIR} ${SOURCES})
 else(buildEmbeddedPlugins)
 	# create a shared library from the sources and link it against ug4.
 	add_library(${pluginName} SHARED ${SOURCES})
-	target_link_libraries (${pluginName} ug4 ConvectionDiffusion adolc)
+	# target_link_libraries (${pluginName} ug4 ConvectionDiffusion adolc)
+	target_link_libraries (${pluginName} ug4 ConvectionDiffusion)
 endif(buildEmbeddedPlugins)
 
 # Dependencies.
-add_dependencies(${pluginName} adolc)
+# add_dependencies(${pluginName} adolc)
 
 
 # Test environment (OPTIONAL).

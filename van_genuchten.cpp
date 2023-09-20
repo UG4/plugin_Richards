@@ -133,11 +133,9 @@ void CreateJSONMap(const JSONType &array, std::map<std::string, JSONType> &map)
 };
 */
 
-//! Factory function.
+//! Factory functions.
 SmartPtr<VanGenuchtenModel> CreateVanGenuchtenModel(const char *json)
 { return CreateModel<VanGenuchtenModel>(json); }
-
-
 
 
 SmartPtr<VanGenuchtenModel> RichardsModelFactory::create_van_genuchten(const char *jstring)
