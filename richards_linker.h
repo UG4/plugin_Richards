@@ -261,13 +261,34 @@ struct ConductivityAdapter
 };
 
 
+/**********************************************
+ * Simple exponential
+ **********************************************/
+
+template <int dim>
+struct ExponentialSaturation : public RichardsLinker<dim, SaturationAdapter<ExponentialModel> >
+{
+	typedef RichardsLinker<dim,SaturationAdapter<ExponentialModel> > base_type;
+	ExponentialSaturation(const ExponentialModel &m) : base_type (m) {}
+};
+
+
+template <int dim>
+struct ExponentialConductivity : public RichardsLinker<dim, ConductivityAdapter<ExponentialModel> >
+{
+	typedef RichardsLinker<dim,ConductivityAdapter<ExponentialModel> > base_type;
+	ExponentialConductivity(const ExponentialModel &m) : base_type (m) {}
+};
+
+
+
+/**********************************************
+ * Van Genuchten - Mualem
+ **********************************************/
+
 //! Shortcuts for van Genuchten
 typedef SaturationAdapter<VanGenuchtenModel> vanGenuchtenSaturationAdapter;
 typedef ConductivityAdapter<VanGenuchtenModel> vanGenuchtenConductivityAdapter;
-
-// TODO: We could define the following classes as follows:
-template <int dim>
-using RichardsSaturation2 = RichardsLinker<dim,vanGenuchtenSaturationAdapter>;
 
 //! van Genuchten classes. (ideally, those could be type-def'ed as well..)
 template <int dim>
@@ -285,9 +306,16 @@ struct RichardsConductivity : public RichardsLinker<dim, vanGenuchtenConductivit
 };
 
 
+// TODO: Can we define the  classes as follows?
+template <int dim>
+using VanGenuchtenSaturation = RichardsLinker<dim,vanGenuchtenSaturationAdapter>;
 
+template <int dim>
+using VanGenuchtenConductivity = RichardsLinker<dim,vanGenuchtenConductivityAdapter>;
 
-//! Gardner
+/**********************************************
+ * Gardner
+ **********************************************/
 typedef SaturationAdapter<GardnerModel> GardnerSaturationAdapter;
 typedef ConductivityAdapter<GardnerModel> GardnerConductivityAdapter;
 
@@ -307,7 +335,9 @@ public:
 	GardnerConductivity(const typename base_type::TModel &model) : base_type (model) {}
 };
 
-//! Haverkamp
+/**********************************************
+ * Haverkamp
+ **********************************************/
 typedef SaturationAdapter<HaverkampModel> HaverkampSaturationAdapter;
 typedef ConductivityAdapter<HaverkampModel> HaverkampConductivityAdapter;
 
@@ -328,95 +358,36 @@ public:
 };
 
 
-#ifdef UG_JSON
 
-// Factory function. Construct UserData from JSONPointers.
+
+
+// Factory function. This construct UserData from suitable odels.
 template <int dim>
 class UserDataFactory {
 
+
 public:
 	typedef CplUserData<number, dim> TUserDataNumber;
+	typedef SmartPtr<TUserDataNumber> return_type;
 
-	UserDataFactory(JSONType &jbase) : m_jbase(jbase)
-	{}
-
-	//! Base class.
-	UserDataFactory(const std::string &jstring)
-	{ m_jbase = nlohmann::json::parse(jstring); }
+	UserDataFactory() {}
 
 	//! This function constructs an object.
-	SmartPtr<TUserDataNumber> create(const std::string &jstring)
-	{
-		JSONType j = nlohmann::json::parse(jstring);
-		return create_from_json(j);
-	}
+	return_type create_saturation(const ExponentialModel &m)
+	{ return make_sp(new ExponentialSaturation<dim>(m)); }
 
-	SmartPtr<TUserDataNumber> create_from_json(JSONType &jobject)
-	{
-		SmartPtr<TUserDataNumber> inst = SPNULL;
+	return_type create_conductivity(const ExponentialModel &m)
+	{ return make_sp(new ExponentialConductivity<dim>(m)); }
 
-		// assigned a number: obj = 1.0
-		if (jobject.is_number())
-		{
-			double val;
-			jobject.get_to(val);
-			return make_sp(new ConstUserNumber<dim>(val));
-		}
+	// van Genuchten models.
+	return_type create_saturation(const VanGenuchtenModel &m)
+	{ return make_sp(new VanGenuchtenSaturation<dim>(m)); }
 
-		// assigned an object; obj = { type = "ObjectType", value = "/gggf/"}
-		if (jobject.is_object())
-		{
-				auto jtype = jobject.at("type");
-				auto jvalue = jobject.at("value");
-				// auto jref = jobject.at("ref");
+	return_type create_conductivity(const VanGenuchtenModel &m)
+	{ return make_sp(new VanGenuchtenConductivity<dim>(m)); }
 
-				std::cout << "Found  " << jvalue << jtype << std::endl;
-
-				// We identify by string
-				if (!jtype.is_string()) return inst; // =SPNULL
-
-				// Found a string starting with @ => look up as JSON pointer
-				std::string mystring;
-				jtype.get_to(mystring);
-
-				// using json_pointer = nlohmann::json::json_pointer;
-				std::cout << "Found  " << mystring << jtype << std::endl;
-				if (std::string("RichardsSaturation").compare(mystring))
-				{
-					if (!jvalue.is_string()) return inst;
-
-					std::string refstring;
-					jvalue.get_to(refstring);
-
-					std::cout << "Found a string " << jvalue << refstring << std::endl;
-
-					std::cout << "Resolving reference: " << refstring << std::endl;
-					JSONPointer jptr = JSONPointer(refstring);
-
-					// Obtain model from JSON.
-					auto jmodel = m_jbase[jptr];
-					std::cout << "Found: " << jmodel << std::endl;
-
-
-
-				}
-
-		}
-
-
-
-		return inst;
-	}
-
-protected:
-	 // this is the parameter map
-	JSONType m_jbase;
 
 };
-
-#endif // UG_JSON
-
-
 
 
 

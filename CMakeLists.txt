@@ -59,11 +59,13 @@ set(SOURCES_TEST	van_genuchten.cpp
 include_directories(AFTER ${UG_ROOT_PATH}/externals/JSONForUG4/json-cxx/single_include)  # JSON
 
 # include_directories(AFTER ${UG_ROOT_PATH}/externals/plugin_ADTools/include)
-include_directories(AFTER ${UG_ROOT_PATH}/plugins/autodiff)
+# include_directories(AFTER ${UG_ROOT_PATH}/plugins/autodiff)
+include_directories(AFTER ${UG_ROOT_PATH}/plugins/ADTools/autodiff)
 # link_directories(${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})   # ADOL-C
 
 # This plugin requires C++ 11.
-set (CMAKE_CXX_STANDARD 17)
+set (CMAKE_CXX_STANDARD 17) # for autodiff
+# add_compile_definitions(_HAS_AUTO_PTR_ETC 1)
 
 # Avoid linking error: undefined reference to boost::system::system_category()
 # add_definitions(-DBOOST_SYSTEM_NO_DEPRECATED)

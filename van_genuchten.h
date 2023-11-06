@@ -40,6 +40,7 @@ typedef autodiff::dual dual;
 
 
 
+
 // Parameters for a van Genuchten model.
 struct VanGenuchtenParameters
 {
@@ -47,10 +48,11 @@ struct VanGenuchtenParameters
 	double n;
 	double m; 		// default: 1.0 - (1.0/n);}
 
-	double thetaS;  // default: 1.0
-	double thetaR;  // default: 0.0
+	double thetaS=1.0;  // default: 1.0
+	double thetaR=0.0;  // default: 0.0
 
-	double Ksat;    // saturated conductivity K_s (optional)
+	double Ksat=1.0;    // saturated conductivity K_s (optional)
+
 };
 
 
@@ -63,10 +65,10 @@ struct HaverkampParameters
 	double beta;
 	double m;
 
-	double thetaS;  // default: 1.0
-	double thetaR;  // default: 0.0
+	double thetaS=1.0;  // default: 1.0
+	double thetaR=0.0;  // default: 0.0
 
-	double Ksat;    // saturated conductivity K_s (optional)
+	double Ksat=1.0;    // saturated conductivity K_s (optional)
 };
 
 
@@ -239,7 +241,7 @@ public: // The following functions can be used from LUA
 
 
 
-struct BrooksCorreyFunctions
+struct BrooksCoreyFunctions
 {
 	static dual ComputeEffectiveSaturation(dual pc, double lambda, double pb)
 	{
@@ -296,11 +298,94 @@ struct IParameterizedModel
 };
 
 
+/**
+ * Exponential model
+ */
+
+struct ExponentialModelParameters
+{
+	double alpha = 1.0;
+	double beta = 1.0;
+
+	double thetaS = 1.0;  // default: 1.0
+	double thetaR = 0.0;  // default: 0.0
+
+	double Ksat = 1.0;    // saturated conductivity K_s (optional)
+};
+
+#ifdef UG_JSON
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ExponentialModelParameters, alpha, beta, thetaS, thetaR, Ksat)
+#endif
+
+
+/// Implement a simple exponential model.
+class ExponentialModel :
+	public IRichardsModel<ExponentialModel>,
+	public IParameterizedModel<ExponentialModelParameters>
+{
+public:
+	typedef IRichardsModel<ExponentialModel> base_type;
+	typedef ExponentialModelParameters parameter_type;
+	typedef IParameterizedModel<ExponentialModelParameters> parameterized_model_type;
+
+
+	friend base_type;
+	friend parameterized_model_type;
+
+	ExponentialModel(const parameter_type &p) : parameterized_model_type(p) {}
+
+#ifdef UG_JSON
+
+#endif
+
+
+protected:
+
+	// p_c = p_a - p_w         : Kapillardruck >=0
+	// psi = p_c / (rho_w * g) : Kapillardruckhoehe >=0
+
+	/// Effective saturation: $0 \le \hat S \le 1$.
+	inline dual EffSaturation_(dual pc) const
+	{
+		const parameter_type &p = this->get_parameters();
+		return exp(-p.alpha * pc);
+	}
+
+	/// Rescaled Saturation: $$ S:=\theta_r+ (\theta_s - \theta_r) * \hat S$$.
+	inline dual Saturation_(dual pc) const
+	{
+		const parameter_type &p = this->get_parameters();
+		UGCheckValues(pc);
+
+		if (pc <= 0) return p.thetaS; // Medium is saturated
+
+		dual Seff = EffSaturation_(pc); UGCheckValues(Seff);
+		return p.thetaR + (p.thetaS-p.thetaR)*Seff;
+
+	}
+
+	/// Relative permeability:  $0 \le k_r \le 1$
+	inline dual RelativePermeability_(dual pc) const
+	{
+		const parameter_type &p = this->get_parameters();
+		UGCheckValues(pc);
+
+		if (pc<= 0) return 1.0;
+		else  exp(-p.beta * pc);
+
+	}
+
+	// Conductivity C:=K_{sat}*k_r
+	inline dual Conductivity_(dual pc) const
+	{
+		return get_parameters().Ksat*RelativePermeability_(pc);
+	}
+
+};
 
 /// Implements a van Genuchten-Mualem model.
 class VanGenuchtenModel
-: public IRichardsModel<VanGenuchtenModel>,
-  public IParameterizedModel<VanGenuchtenParameters>
+: public IRichardsModel<VanGenuchtenModel>, public IParameterizedModel<VanGenuchtenParameters>
 {
 public:
 	typedef IRichardsModel<VanGenuchtenModel> base_type;
@@ -309,6 +394,8 @@ public:
 
 	friend base_type;
 	friend parameterized_model_type;
+
+	VanGenuchtenModel(const parameter_type &p) :  parameterized_model_type(p) {}
 
 #ifdef UG_JSON
 	// TODO: Move to Factory
@@ -320,8 +407,7 @@ public:
 	}
 #endif
 
-	VanGenuchtenModel(const parameter_type &p) :  parameterized_model_type(p)
-	{}
+
 
 
 protected:
@@ -563,6 +649,7 @@ SmartPtr<VanGenuchtenModel> CreateVanGenuchtenModel(const char *json);
 
 //! Factory class.
 struct RichardsModelFactory {
+	SmartPtr<ExponentialModel> create_exponential(const char *json);
 	SmartPtr<VanGenuchtenModel> create_van_genuchten(const char *json);
 	SmartPtr<HaverkampModel> create_haverkamp(const char *json);
 };

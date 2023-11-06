@@ -30,6 +30,11 @@
  * GNU Lesser General Public License for more details.
  */
 
+
+#if __cplusplus >= 201703L
+#define _HAS_AUTO_PTR_ETC 0 // activate for boost, if c++17 and beyond
+#endif
+
 #include <string>
 
 #include "bridge/util.h"
@@ -49,6 +54,8 @@
 #ifdef UG_PARALLEL
 #include "pcl/pcl_util.h"
 #endif
+
+
 
 using namespace std;
 using namespace ug::bridge;
@@ -237,17 +244,6 @@ static void Dimension(Registry& reg, string grp)
 	// user data
 	{
 		// van Genuchten
-			 /*string name = string("RichardsSaturation").append(suffix);
-			 typedef RichardsSaturation<dim> T;
-			 typedef typename T::user_data_base_type TUserData;
-
-			 reg.add_class_<T,TUserData>(name, grp)
-					.template add_constructor<void (*)(const typename T::base_type::TModel&) >("")
-					.add_method("set_capillary", &T::set_capillary)
-					.set_construct_as_smart_pointer(true);
-
-			 reg.add_class_to_group(name, "RichardsSaturation", tag);*/
-
 		typedef RichardsSaturation<dim> S;
 		add_user_data<S, dim>("RichardsSaturation", reg, grp, suffix, tag);
 
@@ -264,21 +260,35 @@ static void Dimension(Registry& reg, string grp)
 		add_user_data<C, dim>("HaverkampConductivity", reg, grp, suffix, tag);
 	}
 
+	{
+		// Exponential
+		typedef ExponentialSaturation<dim> S;
+		add_user_data<S, dim>("ExponentialSaturation", reg, grp, suffix, tag);
+
+		typedef ExponentialConductivity<dim> C;
+		add_user_data<C, dim>("ExponentialConductivity", reg, grp, suffix, tag);
+	}
 
 
 
-#ifdef UG_JSON
+
 	{
 		string name = string("UserDataFactory").append(suffix);
 		typedef UserDataFactory<dim> T;
 		reg.add_class_<T>(name, grp)
-		.template add_constructor<void (*)(const std::string&) >("")
-		.add_method("create", &T::create)
+		.template add_constructor<void (*)() >("")
+		// Exponential
+		.add_method("create_saturation", static_cast<typename T::return_type (T::*)(const ExponentialModel &)>(&T::create_saturation) )
+		.add_method("create_conductivity", static_cast<typename T::return_type (T::*)(const ExponentialModel &)>(&T::create_conductivity) )
+		// van Genuchten-Mualem
+		.add_method("create_saturation", static_cast<typename T::return_type (T::*)(const VanGenuchtenModel &)>(&T::create_saturation) )
+		.add_method("create_conductivity", static_cast<typename T::return_type (T::*)(const VanGenuchtenModel &)>(&T::create_conductivity) )
+
 		.set_construct_as_smart_pointer(true);
 
 		reg.add_class_to_group(name, "UserDataFactory", tag);
 	}
-#endif
+
 
 	{
 		string name = string("OnSurfaceCondition").append(suffix);
@@ -328,6 +338,26 @@ static void Common(Registry& reg, string grp)
 		.add_function("RichardsCrashesFatal", &RichardsCrashesFatal, grp)
 	    .add_function("CreateVanGenuchtenModel", &CreateVanGenuchtenModel, grp);
 
+
+	{
+		 typedef ExponentialModel T;
+		 typedef typename T::parameter_type P;
+		 reg.add_class_<P>(std::string("ExponentialModelParameters"), grp)
+			.add_constructor<void (*)() >("json-string containing the parameters", "", "", "");
+
+
+		 string name = string("ExponentialModel");
+		 reg.add_class_<T>(name, grp)
+			.add_constructor<void (*)(const P&) >("json-string containing the parameters", "", "", "")
+			.add_method("config_string", &T::config_string)
+			.add_method("saturation", &T::Saturation)
+			.add_method("saturation_deriv", &T::dSaturation_dH)
+			.add_method("permeability", &T::Saturation)
+			.add_method("permeability_deriv", &T::dSaturation_dH)
+			.add_method("conductivity", &T::Conductivity)
+		   	.add_method("conductivity_deriv", &T::dConductivity_dH);
+	}
+
 	{
 	   	 string name = string("VanGenuchtenModel");
 	   	 typedef VanGenuchtenModel T;
@@ -357,6 +387,7 @@ static void Common(Registry& reg, string grp)
 		 typedef RichardsModelFactory T;
 		 reg.add_class_<T>(name, grp)
 			.template add_constructor<void (*)() >("")
+			.add_method("create_exponential", &T::create_van_genuchten)
 			.add_method("create_van_genuchten", &T::create_van_genuchten)
 			.add_method("create_haverkamp", &T::create_haverkamp)
 			.set_construct_as_smart_pointer(true);

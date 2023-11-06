@@ -134,12 +134,17 @@ void CreateJSONMap(const JSONType &array, std::map<std::string, JSONType> &map)
 */
 
 //! Factory functions.
-SmartPtr<VanGenuchtenModel> CreateVanGenuchtenModel(const char *json)
-{ return CreateModel<VanGenuchtenModel>(json); }
+SmartPtr<VanGenuchtenModel> CreateVanGenuchtenModel(const char *jstring)
+{
+	UG_LOG("CreateVanGenuchtenModel has been deprecated. Please use 'RichardsModelFactory::create_van_genuchten' ")
+	return CreateModel<VanGenuchtenModel>(jstring);
+}
 
+SmartPtr<ExponentialModel> RichardsModelFactory::create_exponential(const char *jstring)
+{ return CreateModel<ExponentialModel>(jstring); }
 
 SmartPtr<VanGenuchtenModel> RichardsModelFactory::create_van_genuchten(const char *jstring)
-{ return CreateVanGenuchtenModel(jstring); }
+{ return CreateModel<VanGenuchtenModel>(jstring); }
 
 SmartPtr<HaverkampModel> RichardsModelFactory::create_haverkamp(const char *jstring)
 { return CreateModel<HaverkampModel>(jstring); }
