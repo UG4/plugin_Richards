@@ -61,6 +61,9 @@ using namespace std;
 using namespace ug::bridge;
 
 namespace ug{
+
+
+
 namespace Richards{
 
 /** 
@@ -273,10 +276,10 @@ static void Dimension(Registry& reg, string grp)
 
 
 	{
-		string name = string("UserDataFactory").append(suffix);
-		typedef UserDataFactory<dim> T;
+		string name = string("RichardsUserDataFactory").append(suffix);
+		typedef typename Richards::UserDataFactory<dim> T;
 		reg.add_class_<T>(name, grp)
-		.template add_constructor<void (*)() >("")
+		.template add_constructor<void (*)(typename T::input_type) >("")
 		// Exponential
 		.add_method("create_saturation", static_cast<typename T::return_type (T::*)(const ExponentialModel &)>(&T::create_saturation) )
 		.add_method("create_conductivity", static_cast<typename T::return_type (T::*)(const ExponentialModel &)>(&T::create_conductivity) )
@@ -286,7 +289,7 @@ static void Dimension(Registry& reg, string grp)
 
 		.set_construct_as_smart_pointer(true);
 
-		reg.add_class_to_group(name, "UserDataFactory", tag);
+		reg.add_class_to_group(name, "RichardsUserDataFactory", tag);
 	}
 
 
@@ -345,6 +348,9 @@ static void Common(Registry& reg, string grp)
 		 reg.add_class_<P>(std::string("ExponentialModelParameters"), grp)
 			.add_constructor<void (*)() >("json-string containing the parameters", "", "", "");
 
+#ifdef UG_JSON
+		 reg.add_function("JSONSerializer_ExponentialModelParameters", &JSONSerializer<P>, grp);
+#endif
 
 		 string name = string("ExponentialModel");
 		 reg.add_class_<T>(name, grp)
@@ -356,6 +362,7 @@ static void Common(Registry& reg, string grp)
 			.add_method("permeability_deriv", &T::dSaturation_dH)
 			.add_method("conductivity", &T::Conductivity)
 		   	.add_method("conductivity_deriv", &T::dConductivity_dH);
+
 	}
 
 	{
@@ -387,7 +394,7 @@ static void Common(Registry& reg, string grp)
 		 typedef RichardsModelFactory T;
 		 reg.add_class_<T>(name, grp)
 			.template add_constructor<void (*)() >("")
-			.add_method("create_exponential", &T::create_van_genuchten)
+			.add_method("create_exponential", &T::create_exponential)
 			.add_method("create_van_genuchten", &T::create_van_genuchten)
 			.add_method("create_haverkamp", &T::create_haverkamp)
 			.set_construct_as_smart_pointer(true);

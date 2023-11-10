@@ -20,6 +20,7 @@ namespace Richards {
 //////////////////////////////////////////////
 
 #ifdef UG_JSON
+/*
 /// JSON serialize.
 void to_json(JSONType& j, const VanGenuchtenParameters& p) {
 	j = JSONType{{"thetaS", p.thetaS}, {"thetaR", p.thetaR}, {"alpha", p.alpha}, {"n", p.n}, {"Ksat", p.Ksat}};
@@ -57,7 +58,7 @@ void from_json(const JSONType& jobject, VanGenuchtenParameters& p) {
 		if (it != jobject.end()) {it->get_to(p.m);}
 	}
 }
-
+*/
 
 /// JSON serialize.
 void to_json(JSONType& j, const HaverkampParameters& p) {
@@ -115,6 +116,7 @@ void CreateJSONMap(const JSONType &array, std::map<std::string, JSONType> &map)
 		map.insert( std::pair<std::string, JSONType>(it->at("uid"), *it) );
 	}
 
+	// Print
 	for (std::map<std::string, JSONType>::iterator it=map.begin(); it!=map.end(); ++it)
 	    std::cout << it->first << " => " << it->second << '\n';
 }
@@ -139,6 +141,7 @@ SmartPtr<VanGenuchtenModel> CreateVanGenuchtenModel(const char *jstring)
 	UG_LOG("CreateVanGenuchtenModel has been deprecated. Please use 'RichardsModelFactory::create_van_genuchten' ")
 	return CreateModel<VanGenuchtenModel>(jstring);
 }
+
 
 SmartPtr<ExponentialModel> RichardsModelFactory::create_exponential(const char *jstring)
 { return CreateModel<ExponentialModel>(jstring); }

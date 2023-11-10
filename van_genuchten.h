@@ -38,22 +38,43 @@ typedef autodiff::dual dual;
 
 // const double one = 1.0;
 
+inline void UGCheckValues(const dual &number)
+{
+	if (!std::isfinite(number.val) || std::isnan(number.val))
+	{
+		std::cerr << "WARNING: Invalid value:" << number.val << std::endl;
+		UG_ASSERT(std::isfinite(number.val), "Function is not bounded");
+	}
+
+	if (!std::isfinite(number.grad) || std::isnan(number.grad))
+	{
+		std::cerr << "WARNING: Invalid value:" << number.grad << std::endl;
+		UG_ASSERT(std::isfinite(number.grad), "Derivative is not bounded");
+	}
+
+}
+
 
 
 
 // Parameters for a van Genuchten model.
 struct VanGenuchtenParameters
 {
-	double alpha;
-	double n;
-	double m; 		// default: 1.0 - (1.0/n);}
+	double alpha=1.0;
 
-	double thetaS=1.0;  // default: 1.0
+	double n=2.0;
+	double m=0.5; 		// default: 1.0 - (1.0/n);}
+
 	double thetaR=0.0;  // default: 0.0
+	double thetaS=1.0;  // default: 1.0
 
 	double Ksat=1.0;    // saturated conductivity K_s (optional)
 
 };
+
+#ifdef UG_JSON
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(VanGenuchtenParameters, alpha, n, m, thetaS, thetaR, Ksat);
+#endif
 
 
 // Parameters for Haverkamp model.
@@ -65,8 +86,8 @@ struct HaverkampParameters
 	double beta;
 	double m;
 
-	double thetaS=1.0;  // default: 1.0
 	double thetaR=0.0;  // default: 0.0
+	double thetaS=1.0;  // default: 1.0
 
 	double Ksat=1.0;    // saturated conductivity K_s (optional)
 };
@@ -74,11 +95,6 @@ struct HaverkampParameters
 
 
 #ifdef UG_JSON
-/// JSON serialize.
-void to_json(JSONType& j, const VanGenuchtenParameters& p);
-
-/// JSON de-serialize.
- void from_json(const JSONType& j, VanGenuchtenParameters& p);
 
  /// JSON serialize.
  void to_json(JSONType& j, const HaverkampParameters& p);
@@ -118,21 +134,6 @@ protected:
 */
 
 
-inline void UGCheckValues(const dual &val)
-{
-/*	if (!std::isfinite(val.getValue()) || std::isnan(val.getValue()))
-	{
-		std::cerr << "WARNING: Invalid value:" << val.getValue() << std::endl;
-		UG_ASSERT(std::isfinite(val.getValue()), "Function is not bounded");
-	}
-
-	if (!std::isfinite(*(val.getADValue())) || std::isnan(*val.getADValue()) )
-	{
-		std::cerr << "WARNING: Invalid value:" << val.getADValue() << std::endl;
-		UG_ASSERT(std::isfinite(*(val.getADValue())), "Derivative is not bounded");
-	}
-	*/
-}
 
 
 
@@ -304,11 +305,12 @@ struct IParameterizedModel
 
 struct ExponentialModelParameters
 {
+	double pentry = 1.0;
 	double alpha = 1.0;
 	double beta = 1.0;
 
-	double thetaS = 1.0;  // default: 1.0
 	double thetaR = 0.0;  // default: 0.0
+	double thetaS = 1.0;  // default: 1.0
 
 	double Ksat = 1.0;    // saturated conductivity K_s (optional)
 };
@@ -334,9 +336,6 @@ public:
 
 	ExponentialModel(const parameter_type &p) : parameterized_model_type(p) {}
 
-#ifdef UG_JSON
-
-#endif
 
 
 protected:
@@ -348,7 +347,7 @@ protected:
 	inline dual EffSaturation_(dual pc) const
 	{
 		const parameter_type &p = this->get_parameters();
-		return exp(-p.alpha * pc);
+		return exp(-p.alpha * pc/p.pentry);
 	}
 
 	/// Rescaled Saturation: $$ S:=\theta_r+ (\theta_s - \theta_r) * \hat S$$.
@@ -371,7 +370,7 @@ protected:
 		UGCheckValues(pc);
 
 		if (pc<= 0) return 1.0;
-		else  exp(-p.beta * pc);
+		else  exp(-p.beta * pc/p.pentry);
 
 	}
 
@@ -382,6 +381,8 @@ protected:
 	}
 
 };
+
+
 
 /// Implements a van Genuchten-Mualem model.
 class VanGenuchtenModel
@@ -636,7 +637,7 @@ SmartPtr<TModel> CreateModel(const char *jstring) {
 	}
 	catch (...)
 	{
-			std::cout << "Construction failed!" << std::endl;
+			UG_THROW ("Construction failed: " << jstring);
 	}
 	return inst;
 };
@@ -660,6 +661,11 @@ struct RichardsModelFactory {
 
 
 }
+
+
+#ifdef UG_JSON
+	template <> struct is_json_constructible<typename Richards::ExponentialModelParameters> { const static bool value = true;};
+#endif
 }
 
 

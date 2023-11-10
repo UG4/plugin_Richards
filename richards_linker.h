@@ -262,13 +262,13 @@ struct ConductivityAdapter
 
 
 /**********************************************
- * Simple exponential
+ * Simple exponential model.
  **********************************************/
 
 template <int dim>
 struct ExponentialSaturation : public RichardsLinker<dim, SaturationAdapter<ExponentialModel> >
 {
-	typedef RichardsLinker<dim,SaturationAdapter<ExponentialModel> > base_type;
+	typedef RichardsLinker<dim, SaturationAdapter<ExponentialModel> > base_type;
 	ExponentialSaturation(const ExponentialModel &m) : base_type (m) {}
 };
 
@@ -361,7 +361,7 @@ public:
 
 
 
-// Factory function. This construct UserData from suitable odels.
+//! Factory class. This constructs appropriate "UserData" from suitable models.
 template <int dim>
 class UserDataFactory {
 
@@ -370,23 +370,26 @@ public:
 	typedef CplUserData<number, dim> TUserDataNumber;
 	typedef SmartPtr<TUserDataNumber> return_type;
 
-	UserDataFactory() {}
+	typedef SmartPtr<CplUserData<number, dim> > input_type;
 
-	//! This function constructs an object.
+	UserDataFactory(input_type capillary) : m_capillary(capillary) {}
+
+	//! Exponential models.
 	return_type create_saturation(const ExponentialModel &m)
-	{ return make_sp(new ExponentialSaturation<dim>(m)); }
+	{ auto sat = make_sp(new ExponentialSaturation<dim>(m)); sat->set_capillary(m_capillary); return sat; }
 
 	return_type create_conductivity(const ExponentialModel &m)
-	{ return make_sp(new ExponentialConductivity<dim>(m)); }
+	{ auto cond = make_sp(new ExponentialConductivity<dim>(m)); cond->set_capillary(m_capillary); return cond;}
 
 	// van Genuchten models.
 	return_type create_saturation(const VanGenuchtenModel &m)
-	{ return make_sp(new VanGenuchtenSaturation<dim>(m)); }
+	{ auto sat = make_sp(new VanGenuchtenSaturation<dim>(m)); sat->set_capillary(m_capillary); return sat; }
 
 	return_type create_conductivity(const VanGenuchtenModel &m)
-	{ return make_sp(new VanGenuchtenConductivity<dim>(m)); }
+	{ auto cond = make_sp(new VanGenuchtenConductivity<dim>(m)); cond->set_capillary(m_capillary); return cond;}
 
-
+protected:
+	input_type m_capillary;
 };
 
 
