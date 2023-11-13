@@ -56,12 +56,28 @@ set(SOURCES_TEST	van_genuchten.cpp
 
 
 # Dependencies: JSON, autodiff
-include_directories(AFTER ${UG_ROOT_PATH}/externals/JSONForUG4/json-cxx/single_include)  # JSON
+
 
 # include_directories(AFTER ${UG_ROOT_PATH}/externals/plugin_ADTools/include)
 # include_directories(AFTER ${UG_ROOT_PATH}/plugins/autodiff)
-include_directories(AFTER ${UG_ROOT_PATH}/plugins/ADTools/autodiff)
+# include_directories(AFTER ${UG_ROOT_PATH}/plugins/ADTools/autodiff)
 # link_directories(${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})   # ADOL-C
+
+
+if(NOT USE_JSON)
+	MESSAGE(WARNING "This plugin requires JSON. Trying default location.")
+	include_directories(AFTER ${UG_ROOT_PATH}/externals/JSONForUG4/json-cxx/single_include)  # JSON
+else()
+	MESSAGE(MESSAGE "Richards: JSON Found.")
+endif ()
+
+
+if(NOT USE_AUTODIFF)
+	MESSAGE(WARNING "This plugin requires Autodiff. Trying default location.")
+	include_directories(AFTER ${UG_ROOT_PATH}/externals/AutodiffForUG4/autodiff)  # JSON
+else ()
+	MESSAGE(MESSAGE "Richards: Autodiff found: ${autodiff_DIR}")
+endif ()
 
 # This plugin requires C++ 11.
 set (CMAKE_CXX_STANDARD 17) # for autodiff
@@ -77,8 +93,8 @@ if(buildEmbeddedPlugins)
 else(buildEmbeddedPlugins)
 	# create a shared library from the sources and link it against ug4.
 	add_library(${pluginName} SHARED ${SOURCES})
-	# target_link_libraries (${pluginName} ug4 ConvectionDiffusion adolc)
 	target_link_libraries (${pluginName} ug4 ConvectionDiffusion)
+	# target_link_libraries (${pluginName} ug4 ConvectionDiffusion adolc)
 endif(buildEmbeddedPlugins)
 
 # Dependencies.
