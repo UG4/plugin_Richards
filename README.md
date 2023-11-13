@@ -22,7 +22,7 @@ Please install/clone this repository through UG4's package manager
 Depends on:
 * [ugcore](https://github.com/UG4/ugcore).
 * [AutodiffForUG4](https://github.com/UG4/external_AutodiffForUG4).
-* [JSONForUG4](https://github.com/UG4/external_JSONForUG4).
+* [JSONForUG4](https://github.com/UG4/external_JSON).
 
 Requires a C++-17 compiler.
 
