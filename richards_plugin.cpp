@@ -344,17 +344,19 @@ static void Common(Registry& reg, string grp)
 
 	{
 		 typedef ExponentialModel T;
+		 string name = string("ExponentialModel");
+
+		 // Parameters (JSON constructible)
 		 typedef typename T::parameter_type P;
 		 reg.add_class_<P>(std::string("ExponentialModelParameters"), grp)
 			.add_constructor<void (*)() >("json-string containing the parameters", "", "", "");
-
 #ifdef UG_JSON
 		 reg.add_function("JSONSerializer_ExponentialModelParameters", &JSONSerializer<P>, grp);
 #endif
 
-		 string name = string("ExponentialModel");
+		 // Model
 		 reg.add_class_<T>(name, grp)
-			.add_constructor<void (*)(const P&) >("json-string containing the parameters", "", "", "")
+			.add_constructor<void (*)(const P&) >("parameters", "", "", "")
 			.add_method("config_string", &T::config_string)
 			.add_method("saturation", &T::Saturation)
 			.add_method("saturation_deriv", &T::dSaturation_dH)
@@ -366,10 +368,20 @@ static void Common(Registry& reg, string grp)
 	}
 
 	{
-	   	 string name = string("VanGenuchtenModel");
 	   	 typedef VanGenuchtenModel T;
+	 	 string name = string("VanGenuchtenModel");
+
+	   	 // Parameters (JSON constructible)
+	 	 typedef typename T::parameter_type P;
+	 	 reg.add_class_<P>(std::string("VanGenuchtenModelParameters"), grp)
+	   		.add_constructor<void (*)() >("json-string containing the parameters", "", "", "");
+#ifdef UG_JSON
+	   	reg.add_function("JSONSerializer_VanGenuchtenModelParameters", &JSONSerializer<P>, grp);
+#endif
+
+	   	// Model
 	   	 reg.add_class_<T>(name, grp)
-			.add_constructor<void (*)(const char*) >("json-string containing the parameters", "", "", "")
+			.add_constructor<void (*)(const P&) >("parameters", "", "", "")
 			.add_method("config_string", &T::config_string)
 		    .add_method("saturation", &T::Saturation)
 			.add_method("saturation_deriv", &T::dSaturation_dH)

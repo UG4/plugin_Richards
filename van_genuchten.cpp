@@ -20,45 +20,6 @@ namespace Richards {
 //////////////////////////////////////////////
 
 #ifdef UG_JSON
-/*
-/// JSON serialize.
-void to_json(JSONType& j, const VanGenuchtenParameters& p) {
-	j = JSONType{{"thetaS", p.thetaS}, {"thetaR", p.thetaR}, {"alpha", p.alpha}, {"n", p.n}, {"Ksat", p.Ksat}};
-}
-
-
-/// JSON de-serialize.
-void from_json(const JSONType& jobject, VanGenuchtenParameters& p) {
-
-	jobject.at("alpha").get_to(p.alpha);
-	jobject.at("n").get_to(p.n);
-
-     // Optional parameters
-	{
-		p.Ksat = 1.0;
-		auto it = jobject.find("Ksat");
-		if (it != jobject.end()) {it->get_to(p.Ksat);}
-	}
-
-	{
-		p.thetaS = 1.0;
-		auto it = jobject.find("thetaS");
-		if (it != jobject.end()) {it->get_to(p.thetaS);}
-	}
-
-	{
-		p.thetaR = 0.0;
-		auto it = jobject.find("thetaR");
-		if (it != jobject.end()) {it->get_to(p.thetaR);}
-	}
-
-	{
-		p.m =  1.0 - (1.0/p.n);
-		auto it = jobject.find("m");
-		if (it != jobject.end()) {it->get_to(p.m);}
-	}
-}
-*/
 
 /// JSON serialize.
 void to_json(JSONType& j, const HaverkampParameters& p) {

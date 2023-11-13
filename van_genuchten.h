@@ -77,34 +77,6 @@ struct VanGenuchtenParameters
 #endif
 
 
-// Parameters for Haverkamp model.
-struct HaverkampParameters
-{
-	double alpha;
-	double n;
-
-	double beta;
-	double m;
-
-	double thetaR=0.0;  // default: 0.0
-	double thetaS=1.0;  // default: 1.0
-
-	double Ksat=1.0;    // saturated conductivity K_s (optional)
-};
-
-
-
-#ifdef UG_JSON
-
- /// JSON serialize.
- void to_json(JSONType& j, const HaverkampParameters& p);
-
- /// JSON de-serialize.
-  void from_json(const JSONType& j, HaverkampParameters& p);
-#endif
-
-
-
 #ifdef UG_JSON
  /// Some JSON
  void CreateJSONMap(const JSONType &array, std::map<std::string, JSONType> &map);
@@ -252,28 +224,6 @@ struct BrooksCoreyFunctions
 	};
 };
 
-struct VanGenuchtenFunctions
-{
-	/// Effective (reduced) saturation $0 \le \hat S \le 1$
-	/** \hat S:= (1/1+(alpha * psi )^n)^m,  */
-	static dual ComputeEffectiveSaturation(dual psi_, double alpha, double n, double m)
-	{
-			UGCheckValues(psi_);
-			dual apn = alpha*psi_;
-			UGCheckValues(apn);
-
-			apn = pow(apn, n);
-			UGCheckValues(apn);
-
-			dual val = pow(1.0/(1.0+apn), m);
-			UGCheckValues(val);
-			return val;
-	}
-
-	//! Two argument version.
-	static dual ComputeEffectiveSaturation(dual psi_, double alpha, double n)
-	{ return ComputeEffectiveSaturation(psi_, alpha, n, 1.0-(1.0/n)); }
-};
 
 //! Base class for a parameterized model. Provides serialization.
 template <typename TParameter>
@@ -299,9 +249,9 @@ struct IParameterizedModel
 };
 
 
-/**
- * Exponential model
- */
+/*********************************************
+ * Exponential model.
+ *********************************************/
 
 struct ExponentialModelParameters
 {
@@ -316,7 +266,7 @@ struct ExponentialModelParameters
 };
 
 #ifdef UG_JSON
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ExponentialModelParameters, alpha, beta, thetaS, thetaR, Ksat)
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ExponentialModelParameters, pentry, alpha, beta, thetaR, thetaS, Ksat)
 #endif
 
 
@@ -330,13 +280,10 @@ public:
 	typedef ExponentialModelParameters parameter_type;
 	typedef IParameterizedModel<ExponentialModelParameters> parameterized_model_type;
 
-
 	friend base_type;
 	friend parameterized_model_type;
 
 	ExponentialModel(const parameter_type &p) : parameterized_model_type(p) {}
-
-
 
 protected:
 
@@ -347,7 +294,7 @@ protected:
 	inline dual EffSaturation_(dual pc) const
 	{
 		const parameter_type &p = this->get_parameters();
-		return exp(-p.alpha * pc/p.pentry);
+		return exp(-p.alpha * (pc/p.pentry));
 	}
 
 	/// Rescaled Saturation: $$ S:=\theta_r+ (\theta_s - \theta_r) * \hat S$$.
@@ -356,9 +303,9 @@ protected:
 		const parameter_type &p = this->get_parameters();
 		UGCheckValues(pc);
 
-		if (pc <= 0) return p.thetaS; // Medium is saturated
-
-		dual Seff = EffSaturation_(pc); UGCheckValues(Seff);
+		if (pc.val <= 0) return p.thetaS; // Medium is saturated
+		const dual Seff = EffSaturation_(pc); UGCheckValues(Seff);
+		//UG_LOG("seff:" << (pc.val/p.pentry) << " -> " << Seff.val << std::endl);
 		return p.thetaR + (p.thetaS-p.thetaR)*Seff;
 
 	}
@@ -369,8 +316,11 @@ protected:
 		const parameter_type &p = this->get_parameters();
 		UGCheckValues(pc);
 
-		if (pc<= 0) return 1.0;
-		else  exp(-p.beta * pc/p.pentry);
+		if (pc.val<= 0) return 1.0;
+		const dual kval = exp(-p.beta * (pc/p.pentry));
+
+		//UG_LOG("k:" << (pc.val/p.pentry) << " -> " << kval.val << std::endl);
+		return kval;
 
 	}
 
@@ -380,6 +330,33 @@ protected:
 		return get_parameters().Ksat*RelativePermeability_(pc);
 	}
 
+};
+
+/*********************************************
+ * Van Genuchten-Mualem
+ *********************************************/
+
+struct VanGenuchtenFunctions
+{
+	/// Effective (reduced) saturation $0 \le \hat S \le 1$
+	/** \hat S:= (1/1+(alpha * psi )^n)^m,  */
+	static dual ComputeEffectiveSaturation(dual psi_, double alpha, double n, double m)
+	{
+				UGCheckValues(psi_);
+				dual apn = alpha*psi_;
+				UGCheckValues(apn);
+
+				apn = pow(apn, n);
+				UGCheckValues(apn);
+
+				dual val = pow(1.0/(1.0+apn), m);
+				UGCheckValues(val);
+				return val;
+	}
+
+	//! Two argument version.
+	static dual ComputeEffectiveSaturation(dual psi_, double alpha, double n)
+	{ return ComputeEffectiveSaturation(psi_, alpha, n, 1.0-(1.0/n)); }
 };
 
 
@@ -397,18 +374,6 @@ public:
 	friend parameterized_model_type;
 
 	VanGenuchtenModel(const parameter_type &p) :  parameterized_model_type(p) {}
-
-#ifdef UG_JSON
-	// TODO: Move to Factory
-	VanGenuchtenModel(const char* json)
-	{
-		nlohmann::json j = nlohmann::json::parse(json);
-		VanGenuchtenParameters p = j.get<VanGenuchtenParameters>();
-		set_parameters(p);
-	}
-#endif
-
-
 
 
 protected:
@@ -468,6 +433,40 @@ protected:
 	}
 
 };
+
+
+/*********************************************
+ * Haverkamp model.
+ *********************************************/
+
+
+
+// Parameters for Haverkamp model.
+struct HaverkampParameters
+{
+	double alpha;
+	double n;
+
+	double beta;
+	double m;
+
+	double thetaR=0.0;  // default: 0.0
+	double thetaS=1.0;  // default: 1.0
+
+	double Ksat=1.0;    // saturated conductivity K_s (optional)
+};
+
+
+
+#ifdef UG_JSON
+
+ /// JSON serialize.
+ void to_json(JSONType& j, const HaverkampParameters& p);
+
+ /// JSON de-serialize.
+  void from_json(const JSONType& j, HaverkampParameters& p);
+#endif
+
 
 
 
