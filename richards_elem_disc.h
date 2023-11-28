@@ -119,6 +119,12 @@ public:
 	{}
 
 	//! Create classic Richards equation.
+	/*!
+	 *  Element discretization for:
+	 *	\frac{\partial S(-h)}{\partial t}  + \nabla \cdot [- C \nabla (h+z)] = 0
+	 *
+	 * Input parameters: saturation S, conductivity C = Cabs*Crel, gravity $\nabla z$
+	 */
 	SmartPtr<TRichards> create_richards(const char* subsets)
 	{
 		//! Create elem disc.
@@ -131,7 +137,7 @@ public:
 		m_spSaturation->set_capillary(myCapHead);
 		m_spRelConductivity->set_capillary(myCapHead);
 
-		// Gravity.
+		// Gravity (= \nabla z).
 		SmartPtr<TConstUserVector> myGravity = make_sp<TConstUserVector> (new TConstUserVector(0.0));
 		myGravity->set_entry(dim-1, -m_dGravity);
 
