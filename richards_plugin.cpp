@@ -336,10 +336,11 @@ static void Algebra(Registry& reg, string grp)
  */
 static void Common(Registry& reg, string grp)
 {
-	reg.add_function("RichardsSaysHello", &RichardsSaysHello, grp)
+/*	reg.add_function("RichardsSaysHello", &RichardsSaysHello, grp)
 		.add_function("RichardsCrashes", &RichardsCrashes, grp)
 		.add_function("RichardsCrashesFatal", &RichardsCrashesFatal, grp)
 	    .add_function("CreateVanGenuchtenModel", &CreateVanGenuchtenModel, grp);
+	    */
 
 
 	{
@@ -393,7 +394,9 @@ static void Common(Registry& reg, string grp)
 	   	 string name = string("HaverkampModel");
 	   	 typedef HaverkampModel T;
 	   	 reg.add_class_<T>(name, grp)
+#ifdef UG_JSON
 			.add_constructor<void (*)(const char*) >("json-string containing the parameters", "", "", "")
+#endif
 			.add_method("config_string", &T::config_string)
 		    .add_method("saturation", &T::Saturation)
 			.add_method("saturation_deriv", &T::dSaturation_dH)
@@ -401,6 +404,7 @@ static void Common(Registry& reg, string grp)
 	   	 	.add_method("conductivity_deriv", &T::dConductivity_dH);
 	}
 
+#ifdef UG_JSON
 	{
 		 string name = string("RichardsModelFactory");
 		 typedef RichardsModelFactory T;
@@ -411,7 +415,7 @@ static void Common(Registry& reg, string grp)
 			.add_method("create_haverkamp", &T::create_haverkamp)
 			.set_construct_as_smart_pointer(true);
 	}
-
+#endif
 
 
 }
