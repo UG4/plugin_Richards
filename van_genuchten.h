@@ -133,8 +133,9 @@ protected:
 	void get_value_and_deriv(TFunc F, double H, double &f, double &df) const
 	{
 		dual h= H;
-		f = F(h).val;
-		df = derivative(F, wrt(h), at(h));
+		/*f = F(h).val; df = derivative(F, wrt(h), at(h));*/
+		auto [F0, Df0] = derivatives(F, wrt(h), at(h));
+		f = F0; df = Df0;
 	};
 
 public:
@@ -184,22 +185,22 @@ public: // The following functions can be used from LUA
 	// Saturation
 	double Saturation(double H) const
 	{
-		auto func = [this](dual h){ return me()->Saturation_(h);};
 		dual h=H;
+		auto func = [this](dual h){ return me()->Saturation_(h);};
 		return func(h).val;
 	}
 	double dSaturation_dH(double H) const
 	{
-		auto func = [this](dual h){ return me()->Saturation_(h);};
 		dual h=H;
+		auto func = [this](dual h){ return me()->Saturation_(h);};
 		return derivative(func, wrt(h), at(h));
 	}
 
 	/// Conductivity K = Ks*kr
 	double Conductivity(double H)
 	{
-		auto func = [this](dual h){ return me()->Conductivity_(h);};
 		dual h=H;
+		auto func = [this](dual h){ return me()->Conductivity_(h);};
 		return func(h).val;
 	}
 
@@ -545,45 +546,19 @@ public:
 
 	GardnerModel(const VanGenuchtenParameters &p) : m_param(p) {}
 
-	// Saturation
+	/// Saturation
 	void get_saturation(double H, double &S, double &dSdH) const
 	{
 		auto sat = [this](dual h){ return me()->Saturation_(h, m_param);};
 		base_type::get_value_and_deriv(sat, H, S, dSdH);
-
-		/*dual head_ = H;
-		auto mySat = [this](dual h){ return Saturation_(h, m_param);};
-
-		dual sat = mySat(head_);
-		S = sat.val;
-		dSdH = derivative(mySat, wrt(head_), at(head_));*/
-
-		//UGCheckValues();
 	}
-
-	/*
-	void get_saturations(const double *H, double *S, double *dSdH, size_t n) const
-	{
-		for (size_t i=0; i<n; ++i)
-		{ get_saturation(H[i], S[i], dSdH[i]); }
-	}
-*/
-
 
 	/// Conductivity K
 	void get_conductivity(double H, double &K, double &dKdH) const
 	{
-		dual h0 = H;
 		auto cond = [this](dual h){ return Conductivity_(h, m_param);};
 		base_type::get_value_and_deriv(cond, H, K, dKdH);
 	}
-
-/*	void get_conductivities(const double *H, double *K, double *dKdH, size_t n) const
-	{
-		for (size_t i=0; i<n; ++i)
-		{ get_conductivity(H[i], K[i], dKdH[i]); }
-	}*/
-
 
 	std::string config_string() const;
 
