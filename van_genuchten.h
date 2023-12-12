@@ -38,7 +38,10 @@ typedef autodiff::dual dual;
 
 // const double one = 1.0;
 
-inline void UGCheckValues(const dual &number)
+inline void UGCheckValues(const double &number)
+{}
+
+inline dual UGCheckValues(const dual &number)
 {
 	if (!std::isfinite(number.val) || std::isnan(number.val))
 	{
@@ -52,6 +55,8 @@ inline void UGCheckValues(const dual &number)
 		UG_ASSERT(std::isfinite(number.grad), "Derivative is not bounded");
 	}
 
+	return number;
+
 }
 
 
@@ -63,17 +68,19 @@ struct VanGenuchtenParameters
 	double alpha=1.0;
 
 	double n=2.0;
-	double m=0.5; 		// default: 1.0 - (1.0/n);}
+	double m=0.5; 		 // default: 1.0 - (1.0/n);}
 
-	double thetaR=0.0;  // default: 0.0
-	double thetaS=1.0;  // default: 1.0
+	double thetaR=0.0;   // default: 0.0
+	double thetaS=1.0;   // default: 1.0
 
-	double Ksat=1.0;    // saturated conductivity K_s (optional)
+	double Ksat=1.0;     // saturated conductivity K_s (optional)
+
+	double psi0=0; 		// air entry pressure.
 
 };
 
 #ifdef UG_JSON
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(VanGenuchtenParameters, alpha, n, m, thetaS, thetaR, Ksat);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(VanGenuchtenParameters, alpha, n, m, thetaS, thetaR, Ksat, psi0);
 #endif
 
 
@@ -304,7 +311,7 @@ protected:
 		const parameter_type &p = this->get_parameters();
 		UGCheckValues(pc);
 
-		if (pc.val <= 0) return p.thetaS; // Medium is saturated
+		if (pc.val <= 0.0) return p.thetaS; // Medium is saturated
 		const dual Seff = EffSaturation_(pc); UGCheckValues(Seff);
 		//UG_LOG("seff:" << (pc.val/p.pentry) << " -> " << Seff.val << std::endl);
 		return p.thetaR + (p.thetaS-p.thetaR)*Seff;
@@ -337,32 +344,80 @@ protected:
  * Van Genuchten-Mualem
  *********************************************/
 
+
 struct VanGenuchtenFunctions
 {
 	/// Effective (reduced) saturation $0 \le \hat S \le 1$
 	/** \hat S:= (1/1+(alpha * psi )^n)^m,  */
-	static dual ComputeEffectiveSaturation(dual psi_, double alpha, double n, double m)
+
+	template <typename T>
+	static T ComputeEffectiveSaturation(T psi, double alpha, double n, double m)
 	{
-				UGCheckValues(psi_);
-				dual apn = alpha*psi_;
-				UGCheckValues(apn);
+		UGCheckValues(psi);
+		T apn = alpha*psi;
+		UGCheckValues(apn);
 
-				apn = pow(apn, n);
-				UGCheckValues(apn);
+		apn = pow(apn, n);
+		UGCheckValues(apn);
 
-				dual val = pow(1.0/(1.0+apn), m);
-				UGCheckValues(val);
-				return val;
+		T val = pow(1.0/(1.0+apn), m);
+		UGCheckValues(val);
+		return val;
 	}
 
 	//! Two argument version.
-	static dual ComputeEffectiveSaturation(dual psi_, double alpha, double n)
-	{ return ComputeEffectiveSaturation(psi_, alpha, n, 1.0-(1.0/n)); }
+	template <typename T>
+	static T ComputeEffectiveSaturation(T psi_, double alpha, double n)
+	{
+		return ComputeEffectiveSaturation(psi_, alpha, n, 1.0-(1.0/n));
+	}
+
+	template <typename T>
+	static T ComputeSaturation(T Seff, double thetaR, double thetaS)
+	{
+		UGCheckValues(Seff);
+		return thetaR + (thetaS-thetaR)*Seff;
+	}
+
+	//! returns (1-S^{1/m})^m
+	template <typename T>
+	static T ComputeAuxExponential(T Seff, double m)
+	{
+		UGCheckValues(Seff);
+		auto brackS = 1.0-pow(Seff,1.0/m);  UGCheckValues(brackS); 	// => brackS -> 0.0
+		auto auxS = pow(brackS,m); 	UGCheckValues(auxS);			// => this derivative may explode!
+		return auxS; 					// check!
+	};
+
+	template <typename T>
+	static T ComputePermeability(T Seff, double m)
+	{
+		// UGCheckValues(Seff);
+		// dual brackS = 1.0-pow(Seff,1.0/m);  UGCheckValues(brackS); 	// => brackS -> 0.0
+		// dual auxS = pow(brackS,m); 	UGCheckValues(auxS);			// => this derivative may explode!
+		T auxS = ComputeAuxExponential<T>(Seff, m);
+		return sqrt(Seff)*(1.0-auxS)*(1.0-auxS); 					// check!
+	}
+
+
+	static dual ComputePermeabilityExt(dual Seff, double Sc, double m)
+	{
+
+		dual tmp1 = ComputeAuxExponential<dual>(Seff*Sc, m);
+		double tmp2 = ComputeAuxExponential<double>(Sc, m);
+		dual tmp3 = (1.0-tmp1)/(1.0-tmp2);
+
+		return sqrt(Seff)*tmp3*tmp3; 					// check!
+	}
 };
 
 
 
+
 /// Implements a van Genuchten-Mualem model.
+
+class ExtendedVanGenuchtenModel;
+
 class VanGenuchtenModel
 : public IRichardsModel<VanGenuchtenModel>, public IParameterizedModel<VanGenuchtenParameters>
 {
@@ -373,6 +428,7 @@ public:
 
 	friend base_type;
 	friend parameterized_model_type;
+	friend ExtendedVanGenuchtenModel;
 
 	VanGenuchtenModel(const parameter_type &p) :  parameterized_model_type(p) {}
 
@@ -390,18 +446,16 @@ protected:
 	}
 
 	/// Rescaled Saturation: $$ S:=\theta_r+ (\theta_s - \theta_r) * \hat S$$.
-	inline dual Saturation_(dual psi_) const
+	inline dual Saturation_(dual psi) const
 	{
 		const VanGenuchtenParameters &p = m_param;
-		UGCheckValues(psi_);
+		UGCheckValues(psi);
 
-		if (psi_ <= 0) return p.thetaS;
-		else
-		{
-			dual Seff = EffSaturation_(psi_);
-			UGCheckValues(Seff);
-			return p.thetaR + (p.thetaS-p.thetaR)*Seff;
-		}
+		if (psi <= p.psi0) return p.thetaS;
+
+		dual Seff = EffSaturation_(psi);
+		return VanGenuchtenFunctions::ComputeSaturation(Seff, p.thetaR, p.thetaS);
+
 	}
 
 	/// Relative permeability:  $0 \le k_r \le 1$
@@ -410,28 +464,71 @@ protected:
 		const VanGenuchtenParameters &p = m_param;
 		UGCheckValues(psi_);
 
-		if (psi_<= 0) return 1.0;
+		if (psi_<= p.psi0) return 1.0;
 
-		dual Seff = EffSaturation_(psi_); 	// Seff -> 1 is dangerous!
+		dual Seff = EffSaturation_(psi_);		// Seff -> 1 is dangerous!
 		if (fabs(Seff.val-1.0)<1e-15) return 1.0;
-		UGCheckValues(Seff);
 
-		double m = p.m;
-		dual brackS = 1.0-pow(Seff,1.0/m);  // => brackS -> 0.0
-		UGCheckValues(brackS);
-
-		dual auxS = pow(brackS,m); 			// => this derivative may explode!
-		UGCheckValues(auxS);
-
-		return sqrt(Seff)*(1.0-auxS)*(1.0-auxS); // check!
+		return VanGenuchtenFunctions::ComputePermeability(Seff, p.m);
 	}
 
 	// Conductivity C:=K_{sat}*k_r
 	inline dual Conductivity_(dual psi_) const
 	{
-		const VanGenuchtenParameters &p = m_param;
-		return p.Ksat*RelativePermeability_(psi_);
+		return m_param.Ksat*RelativePermeability_(psi_);
 	}
+
+};
+
+
+//! Model from O. Ippisch et al., Advances in Water Resources 29 (2006) 1780–1789
+class ExtendedVanGenuchtenModel
+: public IRichardsModel<VanGenuchtenModel>, public IParameterizedModel<VanGenuchtenParameters>
+{
+
+public:
+	typedef VanGenuchtenParameters parameter_type;
+
+	ExtendedVanGenuchtenModel(const typename VanGenuchtenModel::parameter_type &p)
+	: classic_vg(p)
+	{
+		Seff_C = VanGenuchtenFunctions::ComputeEffectiveSaturation(p.psi0, p.alpha, p.n, p.m);
+		//Seff_C = classic_vg.EffSaturation_(p.psi0);
+	}
+
+	inline dual EffSaturation_(dual psi) const
+	{
+		const VanGenuchtenParameters &p = classic_vg.get_parameters();
+		if (psi < p.psi0) return 1.0;
+		return classic_vg.EffSaturation_(psi)/Seff_C;
+	}
+
+	/// Rescaled Saturation: $$ S:=\theta_r+ (\theta_s - \theta_r) * \hat S$$.
+	inline dual Saturation_(dual psi) const
+	{
+		const VanGenuchtenParameters &p = classic_vg.get_parameters();
+		dual Seff = EffSaturation_(psi);
+		return VanGenuchtenFunctions::ComputeSaturation(Seff, p.thetaR, p.thetaS);
+	}
+
+	/// Relative permeability:  $0 \le k_r \le 1$
+	inline dual RelativePermeability_(dual psi) const
+	{
+		const VanGenuchtenParameters &p = classic_vg.get_parameters();
+		dual Seff = EffSaturation_(psi);
+		return VanGenuchtenFunctions::ComputePermeabilityExt(Seff, Seff_C, p.m);
+	}
+
+	// Conductivity C:=K_{sat}*k_r
+	inline dual Conductivity_(dual psi) const
+	{
+		return RelativePermeability_(psi) * classic_vg.get_parameters().Ksat;
+	}
+
+
+protected:
+	VanGenuchtenModel classic_vg;
+	double Seff_C;
 
 };
 
@@ -626,6 +723,7 @@ SmartPtr<VanGenuchtenModel> CreateVanGenuchtenModel(const char *json);
 struct RichardsModelFactory {
 	SmartPtr<ExponentialModel> create_exponential(const char *json);
 	SmartPtr<VanGenuchtenModel> create_van_genuchten(const char *json);
+	SmartPtr<ExtendedVanGenuchtenModel> create_van_genuchten_ext(const char *json);
 	SmartPtr<HaverkampModel> create_haverkamp(const char *json);
 };
 

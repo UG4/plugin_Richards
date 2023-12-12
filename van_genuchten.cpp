@@ -110,6 +110,9 @@ SmartPtr<ExponentialModel> RichardsModelFactory::create_exponential(const char *
 SmartPtr<VanGenuchtenModel> RichardsModelFactory::create_van_genuchten(const char *jstring)
 { return CreateModel<VanGenuchtenModel>(jstring); }
 
+SmartPtr<ExtendedVanGenuchtenModel> RichardsModelFactory::create_van_genuchten_ext(const char *jstring)
+{ return CreateModel<ExtendedVanGenuchtenModel>(jstring); }
+
 SmartPtr<HaverkampModel> RichardsModelFactory::create_haverkamp(const char *jstring)
 { return CreateModel<HaverkampModel>(jstring); }
 

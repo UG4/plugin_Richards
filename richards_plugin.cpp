@@ -368,26 +368,39 @@ static void Common(Registry& reg, string grp)
 
 	}
 
+
 	{
-	   	 typedef VanGenuchtenModel T;
-	 	 string name = string("VanGenuchtenModel");
+		typedef VanGenuchtenModel T;
+		string name = string("VanGenuchtenModel");
 
-	   	 // Parameters (JSON constructible)
-	 	 typedef typename T::parameter_type P;
-	 	 reg.add_class_<P>(std::string("VanGenuchtenModelParameters"), grp)
-	   		.add_constructor<void (*)() >("json-string containing the parameters", "", "", "");
-#ifdef UG_JSON
-	   	reg.add_function("JSONSerializer_VanGenuchtenModelParameters", &JSONSerializer<P>, grp);
-#endif
+		// Parameters (JSON constructible)
+		typedef typename T::parameter_type P;
+		reg.add_class_<P>(std::string("VanGenuchtenModelParameters"), grp)
+		   .add_constructor<void (*)() >("json-string containing the parameters", "", "", "");
+	#ifdef UG_JSON
+		reg.add_function("JSONSerializer_VanGenuchtenModelParameters", &JSONSerializer<P>, grp);
+	#endif
 
-	   	// Model
-	   	 reg.add_class_<T>(name, grp)
-			.add_constructor<void (*)(const P&) >("parameters", "", "", "")
+		// Model
+		reg.add_class_<T>(name, grp)
+		    .add_constructor<void (*)(const P&) >("parameters", "", "", "")
 			.add_method("config_string", &T::config_string)
-		    .add_method("saturation", &T::Saturation)
+			.add_method("saturation", &T::Saturation)
 			.add_method("saturation_deriv", &T::dSaturation_dH)
 			.add_method("conductivity", &T::Conductivity)
-	   	 	.add_method("conductivity_deriv", &T::dConductivity_dH);
+		   	.add_method("conductivity_deriv", &T::dConductivity_dH);
+
+		typedef ExtendedVanGenuchtenModel ET;
+		name = string("ExtendedVanGenuchtenModel");
+
+		// Model
+		reg.add_class_<ET>(name, grp)
+		   .add_constructor<void (*)(const P&) >("parameters", "", "", "")
+		   .add_method("config_string", &T::config_string)
+		   .add_method("saturation", &T::Saturation)
+		   .add_method("saturation_deriv", &T::dSaturation_dH)
+		   .add_method("conductivity", &T::Conductivity)
+		   .add_method("conductivity_deriv", &T::dConductivity_dH);
 	}
 
 	{
@@ -412,6 +425,7 @@ static void Common(Registry& reg, string grp)
 			.template add_constructor<void (*)() >("")
 			.add_method("create_exponential", &T::create_exponential)
 			.add_method("create_van_genuchten", &T::create_van_genuchten)
+			.add_method("create_van_genuchten_ext", &T::create_van_genuchten_ext)
 			.add_method("create_haverkamp", &T::create_haverkamp)
 			.set_construct_as_smart_pointer(true);
 	}
