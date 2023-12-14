@@ -86,16 +86,6 @@ void CreateJSONMap(const JSONType &array, std::map<std::string, JSONType> &map)
 
 
 
-
-/*SmartPtr<VanGenuchtenModel> VanGenuchtenModelFactory::create_default()
-{
-	// VanGenuchtenParameters SiltLoamParams = { 0.396, 0.131, 0.423, 2.06, 4.96e-2};
-	VanGenuchtenParameters BeitNetofaClayParams = { 0.446, 0.0, 0.152, 1.17, 8.2e-4};
-	SmartPtr<VanGenuchtenModel> inst = make_sp(new VanGenuchtenModel(BeitNetofaClayParams));
-	return inst;
-};
-*/
-
 //! Factory functions.
 SmartPtr<VanGenuchtenModel> CreateVanGenuchtenModel(const char *jstring)
 {
