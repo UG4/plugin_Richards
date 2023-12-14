@@ -38,10 +38,12 @@ typedef autodiff::dual dual;
 
 // const double one = 1.0;
 
-inline void UGCheckValues(const double &number)
-{}
+inline double UGCheckValues(const double number)
+{
+	return number;
+}
 
-inline dual UGCheckValues(const dual &number)
+inline dual UGCheckValues(const dual number)
 {
 	if (!std::isfinite(number.val) || std::isnan(number.val))
 	{
@@ -85,7 +87,7 @@ struct VanGenuchtenParameters
 
 
 #ifdef UG_JSON
- /// Some JSON
+
  void CreateJSONMap(const JSONType &array, std::map<std::string, JSONType> &map);
 #endif
 
@@ -226,8 +228,7 @@ struct BrooksCoreyFunctions
 {
 	static dual ComputeEffectiveSaturation(dual pc, double lambda, double pb)
 	{
-		dual val = pow(pb/pc, lambda);
-		UGCheckValues(val);
+		dual val = UGCheckValues(pow(pb/pc, lambda));
 		return val;
 	};
 };
@@ -384,8 +385,10 @@ struct VanGenuchtenFunctions
 	static T ComputeAuxExponential(T Seff, double m)
 	{
 		UGCheckValues(Seff);
-		auto brackS = 1.0-pow(Seff,1.0/m);  UGCheckValues(brackS); 	// => brackS -> 0.0
-		auto auxS = pow(brackS,m); 	UGCheckValues(auxS);			// => this derivative may explode!
+		T brackS = 1.0-pow(Seff,1.0/m);
+		UGCheckValues(brackS); 	// => brackS -> 0.0
+		T auxS = pow(brackS,m);
+		UGCheckValues(auxS);			// => this derivative may explode!
 		return auxS; 					// check!
 	};
 
@@ -483,7 +486,7 @@ protected:
 
 //! Model from O. Ippisch et al., Advances in Water Resources 29 (2006) 1780–1789
 class ExtendedVanGenuchtenModel
-: public IRichardsModel<VanGenuchtenModel>, public IParameterizedModel<VanGenuchtenParameters>
+: public IRichardsModel<ExtendedVanGenuchtenModel> //, public IParameterizedModel<VanGenuchtenParameters>
 {
 
 public:
@@ -516,7 +519,8 @@ public:
 	{
 		const VanGenuchtenParameters &p = classic_vg.get_parameters();
 		dual Seff = EffSaturation_(psi);
-		return VanGenuchtenFunctions::ComputePermeabilityExt(Seff, Seff_C, p.m);
+		if (fabs(Seff.val-1.0)<1e-15) return 1.0;
+		else return VanGenuchtenFunctions::ComputePermeabilityExt(Seff, Seff_C, p.m);
 	}
 
 	// Conductivity C:=K_{sat}*k_r
@@ -525,6 +529,15 @@ public:
 		return RelativePermeability_(psi) * classic_vg.get_parameters().Ksat;
 	}
 
+
+	/*void set_parameters(const TParameter &p)
+	{ classic_vg.set_parameters(p); }
+
+	const TParameter& get_parameters() const
+	{ return classic_vg.get_parameters(); }*/
+
+	std::string config_string() const
+	{ return classic_vg.config_string(); }
 
 protected:
 	VanGenuchtenModel classic_vg;
