@@ -409,11 +409,11 @@ static void Common(Registry& reg, string grp)
 		// Model
 		reg.add_class_<ET>(name, grp)
 		   .add_constructor<void (*)(const P&) >("parameters", "", "", "")
-		   .add_method("config_string", &T::config_string)
-		   .add_method("saturation", &T::Saturation)
-		   .add_method("saturation_deriv", &T::dSaturation_dH)
-		   .add_method("conductivity", &T::Conductivity)
-		   .add_method("conductivity_deriv", &T::dConductivity_dH);
+		   .add_method("config_string", &ET::config_string)
+		   .add_method("saturation", &ET::Saturation)
+		   .add_method("saturation_deriv", &ET::dSaturation_dH)
+		   .add_method("conductivity", &ET::Conductivity)
+		   .add_method("conductivity_deriv", &ET::dConductivity_dH);
 	}
 
 	{
