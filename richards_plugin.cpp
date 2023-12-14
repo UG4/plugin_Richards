@@ -218,7 +218,7 @@ static void add_user_data(const char* idstring, Registry& reg, const string grp,
 	string name = string(idstring).append(suffix);
 	//typedef RichardsSaturation<dim> T;
 	typedef typename T::user_data_base_type TUserData;
-	typedef typename T::base_type::TModel TModel;
+	typedef typename T::TModel TModel;
 	typedef IRichardsLinker<dim> TCap;
 
 	reg.add_class_<T,TUserData,TCap>(name, grp)
@@ -245,17 +245,15 @@ static void Dimension(Registry& reg, string grp)
 
 	}
 	// user data
-	{
-		// van Genuchten
-		typedef RichardsSaturation<dim> S;
-		add_user_data<S, dim>("RichardsSaturation", reg, grp, suffix, tag);
+	{	// Exponential
+		typedef ExponentialSaturation<dim> S;
+		add_user_data<S, dim>("ExponentialSaturation", reg, grp, suffix, tag);
 
-		typedef RichardsConductivity<dim> C;
-		add_user_data<C, dim>("RichardsConductivity", reg, grp, suffix, tag);
+		typedef ExponentialConductivity<dim> C;
+		add_user_data<C, dim>("ExponentialConductivity", reg, grp, suffix, tag);
 	}
 
-	{
-		// Haverkamp
+	{	// Haverkamp
 		typedef HaverkampSaturation<dim> S;
 		add_user_data<S, dim>("HaverkampSaturation", reg, grp, suffix, tag);
 
@@ -263,14 +261,22 @@ static void Dimension(Registry& reg, string grp)
 		add_user_data<C, dim>("HaverkampConductivity", reg, grp, suffix, tag);
 	}
 
-	{
-		// Exponential
-		typedef ExponentialSaturation<dim> S;
-		add_user_data<S, dim>("ExponentialSaturation", reg, grp, suffix, tag);
+	{	// van Genuchten
+		typedef VanGenuchtenSaturation<dim> S;
+		add_user_data<S, dim>("VanGenuchtenSaturation", reg, grp, suffix, tag);
 
-		typedef ExponentialConductivity<dim> C;
-		add_user_data<C, dim>("ExponentialConductivity", reg, grp, suffix, tag);
+		typedef VanGenuchtenConductivity<dim> C;
+		add_user_data<C, dim>("VanGenuchtenConductivity", reg, grp, suffix, tag);
 	}
+
+	{	// van Genuchten
+		typedef ExtendedVanGenuchtenSaturation<dim> S;
+		add_user_data<S, dim>("ExtendedVanGenuchtenSaturation", reg, grp, suffix, tag);
+
+		typedef ExtendedVanGenuchtenConductivity<dim> C;
+		add_user_data<C, dim>("ExtendedVanGenuchtenConductivity", reg, grp, suffix, tag);
+	}
+
 
 
 
@@ -279,13 +285,20 @@ static void Dimension(Registry& reg, string grp)
 		string name = string("RichardsUserDataFactory").append(suffix);
 		typedef typename Richards::UserDataFactory<dim> T;
 		reg.add_class_<T>(name, grp)
+		.template add_constructor<void (*)() >("")
 		.template add_constructor<void (*)(typename T::input_type) >("")
 		// Exponential
-		.add_method("create_saturation", static_cast<typename T::return_type (T::*)(const ExponentialModel &)>(&T::create_saturation) )
-		.add_method("create_conductivity", static_cast<typename T::return_type (T::*)(const ExponentialModel &)>(&T::create_conductivity) )
+		.add_method("create_saturation", static_cast<RUDF_SMARTPTR_TYPE(ExponentialModel,saturation,dim) (T::*)(const ExponentialModel &)>(&T::create_saturation) )
+		.add_method("create_conductivity", static_cast<RUDF_SMARTPTR_TYPE(ExponentialModel,conductivity,dim) (T::*)(const ExponentialModel &)>(&T::create_conductivity) )
+		// Haverkamp
+		.add_method("create_saturation", static_cast<RUDF_SMARTPTR_TYPE(HaverkampModel,saturation,dim) (T::*)(const HaverkampModel &)>(&T::create_saturation) )
+		.add_method("create_conductivity", static_cast<RUDF_SMARTPTR_TYPE(HaverkampModel,conductivity,dim) (T::*)(const HaverkampModel &)>(&T::create_conductivity) )
 		// van Genuchten-Mualem
-		.add_method("create_saturation", static_cast<typename T::return_type (T::*)(const VanGenuchtenModel &)>(&T::create_saturation) )
-		.add_method("create_conductivity", static_cast<typename T::return_type (T::*)(const VanGenuchtenModel &)>(&T::create_conductivity) )
+		.add_method("create_saturation", static_cast<RUDF_SMARTPTR_TYPE(VanGenuchtenModel,saturation,dim) (T::*)(const VanGenuchtenModel &)>(&T::create_saturation) )
+		.add_method("create_conductivity", static_cast<RUDF_SMARTPTR_TYPE(VanGenuchtenModel,conductivity,dim) (T::*)(const VanGenuchtenModel &)>(&T::create_conductivity) )
+		// Extended van Genuchten-Mualem
+		.add_method("create_saturation", static_cast<RUDF_SMARTPTR_TYPE(ExtendedVanGenuchtenModel,saturation,dim) (T::*)(const ExtendedVanGenuchtenModel &)>(&T::create_saturation) )
+		.add_method("create_conductivity", static_cast<RUDF_SMARTPTR_TYPE(ExtendedVanGenuchtenModel,conductivity,dim) (T::*)(const ExtendedVanGenuchtenModel &)>(&T::create_conductivity) )
 
 		.set_construct_as_smart_pointer(true);
 

@@ -104,6 +104,7 @@ public:
 	typedef IElemDisc<TDomain>  TElemDisc;
 	typedef ug::ConvectionDiffusionPlugin::ConvectionDiffusionFV1<TDomain> TConvDiff;
 	typedef RichardsElemDisc<TDomain> TRichards;
+	typedef IRichardsLinker<dim> TRichardsLinker;
 
 	typedef ConstUserVector<dim> TConstUserVector;
 	typedef ConstUserNumber<dim> TConstUserNumber;
@@ -174,13 +175,31 @@ public:
 		return base;
 	}
 
+/*
+	SmartPtr<TRichards> create_richards(const char* subsets,
+			typename UserDataFactory<dim>::return_type satLinker,
+			typename UserDataFactory<dim>::return_type condLinker)
+	{
+
+		this->set_saturation(satLinker.cast_dynamic<TSaturation>());
+		this->set_saturation(condLinker.cast_dynamic<TConductivity>());
+		this->create_richards(subsets);
+
+	};*/
+
 	// Classic Richards.
 	typedef IRichardsLinker<dim> TSaturation;
 	typedef IRichardsLinker<dim> TConductivity;
-	//typedef typename RichardsConductivity<dim>::richards_base_type TConductivity;
 
 	void set_saturation(SmartPtr<TSaturation> data) {m_spSaturation = data;}
 	void set_conductivity(SmartPtr<TConductivity> data) {m_spRelConductivity = data;}
+
+	/*void set_saturation(SmartPtr<TNumberData> data)
+	{m_spSaturation = data.template cast_dynamic<TSaturation> ();}
+	void set_conductivity(SmartPtr<TNumberData> data)
+	{m_spRelConductivity = data.template cast_dynamic<TConductivity>();}*/
+
+
 
 	// Extensions.
 	void set_abs_conductivity(SmartPtr<TNumberData> data) {m_spAbsConductivity = data;}

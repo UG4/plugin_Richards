@@ -72,6 +72,16 @@ class Lucas1 : public LucasBase{
 	{ return x*x}
 }
 */
+
+
+//! Model traits define a contract mapping TModel to saturations/conductivities
+template <typename TModel, int dim>
+struct model_traits
+{
+	typedef void saturation_type;
+	typedef void conductivity_type;
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // Richards linker
 ////////////////////////////////////////////////////////////////////////////////
@@ -83,12 +93,14 @@ struct IRichardsLinker
 	IRichardsLinker() : m_spCapillary(NULL), m_spDCapillary(NULL) {};
 	virtual ~IRichardsLinker(){};
 
-	SmartPtr<CplUserData<number, dim> > m_spCapillary;
+	typedef CplUserData<number, dim> TCplUserData;
+	SmartPtr<TCplUserData> m_spCapillary;
 	SmartPtr<DependentUserData<number, dim> > m_spDCapillary;
 
 	virtual void set_capillary(SmartPtr<CplUserData<number, dim> > data) = 0;
-
 };
+
+
 
 //! Prototype of a linker. Returns values depending on the Functor class.
 template <int dim, class TFunctor>
@@ -112,9 +124,9 @@ public:
 		RichardsLinker(const TModel &model) :
 			richards_base_type(), m_model(model)
 		{
-			//	this linker needs exactly one input
+			// UG_LOG("RichardsLinker::RichardsLinker" << std::endl);
+			//this linker needs exactly one input
 			this->set_num_input(_SIZE_);
-			UG_LOG("RichardsLinker::RichardsLinker" << std::endl);
 		}
 
 
@@ -233,6 +245,7 @@ public:
 			base_type::set_input(_H_, data, data);
 		}
 
+
 	public:
 		TModel& model() { return m_model; }
 		const TModel& model() const { return m_model; }
@@ -242,7 +255,7 @@ public:
 };
 
 
-//! Returns saturations.
+/*! Maps M::get_saturations -> get_func_values */
 template <typename M>
 struct SaturationAdapter
 {
@@ -252,6 +265,7 @@ struct SaturationAdapter
 };
 
 //! Returns conductivities (note: corresponds to relative permeability, iff Ksat=1.0).
+/*! Maps M::get_conductivities -> get_func_values */
 template <typename M>
 struct ConductivityAdapter
 {
@@ -281,6 +295,13 @@ struct ExponentialConductivity : public RichardsLinker<dim, ConductivityAdapter<
 };
 
 
+
+template<int dim>
+struct model_traits<ExponentialModel, dim>
+{
+	typedef ExponentialSaturation<dim> saturation_type;
+	typedef ExponentialConductivity<dim> conductivity_type;
+};
 
 /**********************************************
  * Van Genuchten - Mualem
@@ -313,6 +334,39 @@ using VanGenuchtenSaturation = RichardsLinker<dim,vanGenuchtenSaturationAdapter>
 template <int dim>
 using VanGenuchtenConductivity = RichardsLinker<dim,vanGenuchtenConductivityAdapter>;
 
+
+template<int dim>
+struct model_traits<VanGenuchtenModel, dim>
+{
+	typedef VanGenuchtenSaturation<dim> saturation_type;
+	typedef VanGenuchtenConductivity<dim> conductivity_type;
+};
+
+
+
+/**********************************************
+ * Extended van-Genuchten-Mualem
+ **********************************************/
+
+typedef SaturationAdapter<ExtendedVanGenuchtenModel> IppischSaturationAdapter;
+typedef ConductivityAdapter<ExtendedVanGenuchtenModel> IppischConductivityAdapter;
+
+
+template <int dim>
+using ExtendedVanGenuchtenSaturation = RichardsLinker<dim,IppischSaturationAdapter>;
+
+template <int dim>
+using ExtendedVanGenuchtenConductivity  = RichardsLinker<dim,IppischConductivityAdapter>;
+
+
+template<int dim>
+struct model_traits<ExtendedVanGenuchtenModel, dim>
+{
+	typedef ExtendedVanGenuchtenSaturation<dim> saturation_type;
+	typedef ExtendedVanGenuchtenConductivity<dim> conductivity_type;
+};
+
+
 /**********************************************
  * Gardner
  **********************************************/
@@ -333,6 +387,14 @@ class GardnerConductivity : public RichardsLinker<dim,GardnerConductivityAdapter
 public:
 	typedef RichardsLinker<dim,GardnerConductivityAdapter> base_type;
 	GardnerConductivity(const typename base_type::TModel &model) : base_type (model) {}
+};
+
+
+template<int dim>
+struct model_traits<GardnerModel, dim>
+{
+	typedef GardnerSaturation<dim> saturation_type;
+	typedef GardnerConductivity<dim> conductivity_type;
 };
 
 /**********************************************
@@ -358,10 +420,42 @@ public:
 };
 
 
+template<int dim>
+struct model_traits<HaverkampModel, dim>
+{
+	typedef HaverkampSaturation<dim> saturation_type;
+	typedef HaverkampConductivity<dim> conductivity_type;
+};
 
+
+/**********************************************
+ * Haverkamp
+ **********************************************/
 
 
 //! Factory class. This constructs appropriate "UserData" from suitable models.
+
+#define RUDF_SMARTPTR_TYPE(TModel,func,dim)  SmartPtr<typename model_traits<TModel,dim>::func ## _type>
+
+
+#define RUDF_DEFINE_SATURATION(TModel, TReturn, dim) TReturn\
+	create_saturation(const TModel &m)\
+	{ auto sat = make_sp(new typename model_traits<TModel,dim>::saturation_type(m)); sat->set_capillary(m_capillary); return sat;}
+
+#define RUDF_DEFINE_CONDUCTIVITY(TModel, TReturn, dim) TReturn\
+	create_conductivity(const TModel &m)\
+	{ auto sat = make_sp(new typename model_traits<TModel,dim>::conductivity_type(m)); sat->set_capillary(m_capillary); return sat;}
+
+#define RUDF_DEFINE_CREATE(TModel, func, dim) SmartPtr<typename model_traits<TModel,dim>::func ## _type>\
+	create_ ## func (const TModel &m)\
+	{ auto sat = make_sp(new typename model_traits<TModel,dim>::func ## _type(m)); sat->set_capillary(m_capillary); return sat;}
+
+
+/*
+#define RUDF_DEFINE_CONDUCTIVITY(TModel,dim) SmartPtr<typename model_traits<TModel,dim>::conductivity_type>\
+	create_conductivity(const TModel &m)\
+	{ auto sat = make_sp(new typename model_traits<TModel,dim>::conductivity_type(m)); sat->set_capillary(m_capillary); return sat;} */
+
 template <int dim>
 class UserDataFactory {
 
@@ -372,21 +466,52 @@ public:
 
 	typedef SmartPtr<CplUserData<number, dim> > input_type;
 
+	UserDataFactory() : m_capillary(SPNULL) {}
 	UserDataFactory(input_type capillary) : m_capillary(capillary) {}
 
 	//! Exponential models.
-	return_type create_saturation(const ExponentialModel &m)
-	{ auto sat = make_sp(new ExponentialSaturation<dim>(m)); sat->set_capillary(m_capillary); return sat; }
+	/* return_type create_saturation(const ExponentialModel &m)
+		{ auto sat = make_sp(new typename model_traits<ExponentialModel, dim>::saturation_type(m)); sat->set_capillary(m_capillary); return sat; }
 
-	return_type create_conductivity(const ExponentialModel &m)
-	{ auto cond = make_sp(new ExponentialConductivity<dim>(m)); cond->set_capillary(m_capillary); return cond;}
+		return_type create_conductivity(const ExponentialModel &m)
+		{ auto cond = make_sp(new typename model_traits<ExponentialModel, dim>::conductivity_type(m)); cond->set_capillary(m_capillary); return cond;}
+
+	 */
+
+	RUDF_DEFINE_CREATE(ExponentialModel,saturation,dim);
+	RUDF_DEFINE_CREATE(ExponentialModel,conductivity,dim);
+
+
+	//! Haverkamp models.
+	/*return_type create_saturation(const HaverkampModel &m)
+	{ auto sat = make_sp(new HaverkampSaturation<dim>(m)); sat->set_capillary(m_capillary); return sat; }
+
+	return_type create_conductivity(const HaverkampModel &m)
+	{ auto cond = make_sp(new HaverkampConductivity<dim>(m)); cond->set_capillary(m_capillary); return cond;}*/
+
+	RUDF_DEFINE_CREATE(HaverkampModel,saturation,dim);
+	RUDF_DEFINE_CREATE(HaverkampModel,conductivity,dim);
 
 	// van Genuchten models.
-	return_type create_saturation(const VanGenuchtenModel &m)
+	/*return_type create_saturation(const VanGenuchtenModel &m)
 	{ auto sat = make_sp(new VanGenuchtenSaturation<dim>(m)); sat->set_capillary(m_capillary); return sat; }
 
 	return_type create_conductivity(const VanGenuchtenModel &m)
-	{ auto cond = make_sp(new VanGenuchtenConductivity<dim>(m)); cond->set_capillary(m_capillary); return cond;}
+	{ auto cond = make_sp(new VanGenuchtenConductivity<dim>(m)); cond->set_capillary(m_capillary); return cond;}*/
+
+	RUDF_DEFINE_CREATE(VanGenuchtenModel,saturation,dim);
+	RUDF_DEFINE_CREATE(VanGenuchtenModel,conductivity,dim);
+
+	// Extended van Genuchten models.
+	/*return_type create_saturation(const ExtendedVanGenuchtenModel &m)
+	{ auto sat = make_sp(new ExtendedVanGenuchtenSaturation<dim>(m)); sat->set_capillary(m_capillary); return sat; }
+
+	return_type create_conductivity(const ExtendedVanGenuchtenModel &m)
+	{ auto cond = make_sp(new ExtendedVanGenuchtenConductivity<dim>(m)); cond->set_capillary(m_capillary); return cond;}
+*/
+
+	RUDF_DEFINE_CREATE(ExtendedVanGenuchtenModel,saturation,dim);
+	RUDF_DEFINE_CREATE(ExtendedVanGenuchtenModel,conductivity,dim);
 
 protected:
 	input_type m_capillary;
