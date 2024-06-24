@@ -16,6 +16,7 @@ using JSONPointer = nlohmann::json::json_pointer;
 
 #ifdef UG_JSON
 
+
 template <class T>
 struct is_json_constructible
 {
@@ -26,16 +27,27 @@ template <class T>
 inline constexpr bool is_json_constructible_v = is_json_constructible<T>::value;
 
 
+
+//! This constructs an object from JSON.
 template <typename P>
-SmartPtr<P> JSONSerializer(const char *jstring)
+SmartPtr<P> JSONSerializer(nlohmann::json j)
 {
 	UG_COND_THROW(! is_json_constructible_v<P>, "ERROR: Type is not constructible!")
 	SmartPtr<P> data = make_sp(new P());
-	nlohmann::json j = nlohmann::json::parse(jstring);
 	j.get_to<P>(*data);
 	return data;
 
 };
+
+//! This constructs an object from a string.
+template <typename P>
+SmartPtr<P> JSONSerializer(const char *jstring)
+{
+	nlohmann::json j = nlohmann::json::parse(jstring);
+	return JSONSerializer<P>(j);
+
+};
+
 #endif
 
 

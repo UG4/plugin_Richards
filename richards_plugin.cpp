@@ -365,7 +365,8 @@ static void Common(Registry& reg, string grp)
 		 reg.add_class_<P>(std::string("ExponentialModelParameters"), grp)
 			.add_constructor<void (*)() >("json-string containing the parameters", "", "", "");
 #ifdef UG_JSON
-		 reg.add_function("JSONSerializer_ExponentialModelParameters", &JSONSerializer<P>, grp);
+		 reg.add_function("JSONSerializer_ExponentialModelParameters",
+					static_cast<SmartPtr<P> (*)(const char *)>(&JSONSerializer<P>), grp);
 #endif
 
 		 // Model
@@ -391,7 +392,8 @@ static void Common(Registry& reg, string grp)
 		reg.add_class_<P>(std::string("VanGenuchtenModelParameters"), grp)
 		   .add_constructor<void (*)() >("json-string containing the parameters", "", "", "");
 	#ifdef UG_JSON
-		reg.add_function("JSONSerializer_VanGenuchtenModelParameters", &JSONSerializer<P>, grp);
+		reg.add_function("JSONSerializer_VanGenuchtenModelParameters",
+				static_cast<SmartPtr<P> (*)(const char *)>(&JSONSerializer<P>), grp);
 	#endif
 
 		// Model
