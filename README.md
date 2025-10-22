@@ -1,7 +1,10 @@
 # Richards plugin #
 
 **Richards** is a **UG4-Plugin** providing tools for the implementation of unsaturated flow.
+
+## License
 Copyright 2019-2023 UG4 Developers, University Frankfurt
+The software is vailable under [EUPL v1.2] (https://joinup.ec.europa.eu/sites/default/files/custom-page/attachment/2020-03/EUPL-1.2%20EN.txt).
 
 ### Available Models ###
 
