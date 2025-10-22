@@ -1,4 +1,11 @@
+// SPDX-FileCopyrightText: 2025 Goethe Universitaet Frankfurt
+// SPDX-License-Identifier: EUPL-1.2
+// SPDX-FileContributor: Arne Naegel 
+// SPDX-FileType: SOURCE
+
 #include <boost/test/unit_test.hpp> 		// Boost test framework
+//g++ unit_test.cpp -I/Users/anaegel/Software/third-party/nlohmann/json/include/ -I/Users/anaegel/Software/ug4-git/externals/BoostForUG4/ -std=c++11 -I/Users/anaegel/adolc_base/include -L /Users/anaegel/adolc_base/lib64/ -ladolc
+
 
 #include "../van_genuchten.h"      			// Plugin dependencies
 
