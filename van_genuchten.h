@@ -280,6 +280,10 @@ struct ExponentialModelParameters
 
 
 /// Implement a simple exponential model.
+/*!
+ * Effective saturation: $exp (-alpha psi/psi0)$
+ * Relative permeablity: $exp (-beta psi/psi0)$
+ */
 class ExponentialModel :
 	public IRichardsModel<ExponentialModel>,
 	public IParameterizedModel<ExponentialModelParameters>

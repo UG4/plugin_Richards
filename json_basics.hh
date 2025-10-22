@@ -16,27 +16,29 @@ using JSONPointer = nlohmann::json::json_pointer;
 
 #ifdef UG_JSON
 
-
+#ifndef UG_HAS_JSON_BASICS
+// These structs are defined in "bindings/json/json_basics.hh"
 template <class T>
 struct is_json_constructible
 {
 	const static bool value = std::is_default_constructible<T>::value;
 };
 
-template <class T>
+/*template <class T>
 inline constexpr bool is_json_constructible_v = is_json_constructible<T>::value;
-
+*/
+#endif
 
 
 //! This constructs an object from JSON.
 template <typename P>
 SmartPtr<P> JSONSerializer(nlohmann::json j)
 {
-	UG_COND_THROW(! is_json_constructible_v<P>, "ERROR: Type is not constructible!")
+	UG_LOG("JSONSerializer will become deprecated. Directly use JSONBuilder instead!")
+	UG_COND_THROW(! is_json_constructible<P>::value, "ERROR: Type is not constructible!")
 	SmartPtr<P> data = make_sp(new P());
 	j.get_to<P>(*data);
 	return data;
-
 };
 
 //! This constructs an object from a string.
@@ -48,7 +50,7 @@ SmartPtr<P> JSONSerializer(const char *jstring)
 
 };
 
-#endif
+#endif //UG_JSON
 
 
 } // namespace ug
