@@ -35,7 +35,7 @@
 # Simply specify the plugins name and a list of your source files.
 ################################################################################
 
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 2.8.12...4.4)
 
 # Name of your plugin and sources.
 set(pluginName	Richards)
