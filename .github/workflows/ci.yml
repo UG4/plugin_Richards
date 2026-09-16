@@ -22,12 +22,12 @@ jobs:
 
       - name: Fetch UG4 core dependency
         run: |
-        mkdir ug4-test
-        cd ug4-test
+          mkdir ug4-test
+          cd ug4-test
 
-        git clone --depth 1 https://github.com/UG4/ugcore.git ugcore
-        mkdir plugins
-        mv ../Richards plugins/Richards
+          git clone --depth 1 https://github.com/UG4/ugcore.git ugcore
+          mkdir plugins
+          mv ../Richards plugins/Richards
 
       - name: Configure project with tests enabled
         run: |
