@@ -39,7 +39,7 @@ jobs:
           # -DUG_ROOT_CMAKE_PATH="$GITHUB_WORKSPACE/ug4-test/ugcore/cmake"
 
       - name: Build project and tests
-        run: cmake --build build --parallel 2 --target richards_test
+        run: cmake --build ug4-test/build --parallel 2 --target richards_test
 
       - name: Run Richards test suite
-        run: ctest --test-dir build --output-on-failure --verbose -R RichardsUnitTests
+        run: ctest --test-dir ug4-test/build --output-on-failure --verbose -R RichardsUnitTests
