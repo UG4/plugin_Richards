@@ -1,0 +1,7 @@
+version = 1
+
+# A simple glob of all files in resources/img/
+[[annotations]]
+path = "*"
+SPDX-FileCopyrightText = "2025 Goethe Universitaet Frankfurt"
+SPDX-License-Identifier = "EUPL-1.2"
