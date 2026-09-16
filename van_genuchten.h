@@ -63,7 +63,7 @@ struct VanGenuchtenParameters
 	double alpha=1.0;
 
 	double n=2.0;
-	double m=0.5; 		// default: 1.0 - (1.0/n);}
+	double m=1.0 - (1.0 / n); // default: 1.0 - (1.0/n)
 
 	double thetaR=0.0;  // default: 0.0
 	double thetaS=1.0;  // default: 1.0

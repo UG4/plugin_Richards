@@ -35,7 +35,15 @@
 # Simply specify the plugins name and a list of your source files.
 ################################################################################
 
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 2.8.12..4.4)
+
+
+message(STATUS "# Richards - BEGIN ##############################################################################")
+
+
+#if(NOT DEFINED UG_ROOT_CMAKE_PATH)
+#	message(FATAL_ERROR "This file must be included from the UG4 build system. Use the parent UG4 CMake configuration instead.")
+#endif()
 
 # Name of your plugin and sources.
 set(pluginName	Richards)
@@ -68,7 +76,7 @@ if(NOT USE_JSON)
 	MESSAGE(WARNING "This plugin requires JSON. Trying default location.")
 	include_directories(AFTER ${UG_ROOT_PATH}/externals/JSONForUG4/json-cxx/single_include)  # JSON
 else()
-	MESSAGE(MESSAGE "Richards: JSON Found.")
+	MESSAGE(STATUS "Richards: JSON Found.")
 endif ()
 
 
@@ -76,7 +84,7 @@ if(NOT USE_AUTODIFF)
 	MESSAGE(WARNING "This plugin requires Autodiff. Trying default location.")
 	include_directories(AFTER ${UG_ROOT_PATH}/externals/AutodiffForUG4/autodiff)  # JSON
 else ()
-	MESSAGE(MESSAGE "Richards: Autodiff found: ${autodiff_DIR}")
+	MESSAGE(STATUS "Richards: Autodiff found: ${autodiff_DIR}")
 endif ()
 
 # This plugin requires C++ 11.
@@ -102,5 +110,9 @@ endif(buildEmbeddedPlugins)
 
 
 # Test environment (OPTIONAL).
-# add_executable(richards_test ${SOURCES_TEST})
-# target_link_libraries (richards_test adolc ug4)
+#if(BUILD_TESTING)
+#	add_subdirectory(tests)
+#endif()
+
+message(STATUS "# Richards - END ##############################################################################")
+

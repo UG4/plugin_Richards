@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: Richards
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake
+
+      - name: Fetch UG4 core dependency
+        run: |
+        mkdir ug4-test
+        cd ug4-test
+
+        git clone --depth 1 https://github.com/UG4/ugcore.git ugcore
+        mkdir plugins
+        mv ../Richards plugins/Richards
+
+      - name: Configure project with tests enabled
+        run: |
+          cd ug4-test
+          cmake -S plugins/Richards -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DUG_ROOT_PATH="$GITHUB_WORKSPACE/ug4-test/ugcore" 
+          # -DUG_ROOT_CMAKE_PATH="$GITHUB_WORKSPACE/ug4-test/ugcore/cmake"
+
+      - name: Build project and tests
+        run: cmake --build build --parallel 2 --target richards_test
+
+      - name: Run Richards test suite
+        run: ctest --test-dir build --output-on-failure --verbose -R RichardsUnitTests
