@@ -10,25 +10,24 @@
 // Standard lib.
 #include <cmath>
 
-// Use ADOL-C for automatic differentiation.
-// #include <adolc/adtl.h>
-
 // Use autodiff for automatic differentiation.
 #include <autodiff/forward/dual.hpp>
 
 
-
 // UG4 lib.
-#include "common/util/smart_pointer.h"
+//#include "common/util/smart_pointer.h"
 #include "common/assert.h"
-#include "registry/class.h"
+// #include "registry/class.h"
 
 // My libs.
 #include <nlohmann/json.hpp>
 #include "json_basics.hh"
 
 
-
+#ifndef UG_ASSERT
+#include <cassert>
+#define UG_ASSERT(expr, msg) assert((expr) && (msg))
+#endif
 namespace ug{
 namespace Richards{
 

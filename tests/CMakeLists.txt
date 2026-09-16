@@ -13,6 +13,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(GTest REQUIRED)
+if(NOT GTest_FOUND)
+    message(FATAL_ERROR "GoogleTest not found. Please install GTest or provide CMAKE_PREFIX_PATH.")
+endif()
 
 add_executable(richards_test
     ../van_genuchten.cpp
@@ -26,10 +29,13 @@ target_include_directories(richards_test PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../ugcore/ugbase
 )
 
-target_link_directories(richards_test
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib)
+# This must be activated, if we link againt the ug4 library.
+#target_link_directories(richards_test
+#    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib)
 
 target_link_libraries(richards_test 
-    PRIVATE GTest::gtest_main ug4)
+    PRIVATE GTest::gtest_main 
+#      ug4
+)
 
 add_test(NAME RichardsUnitTests COMMAND richards_test)
