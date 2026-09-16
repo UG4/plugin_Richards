@@ -1,10 +1,7 @@
-#/*
- * richards_equation.h
- *
- *  Created on: 28.01.2020
- *      Author: anaegel
- */
-
+// SPDX-FileCopyrightText: 2025 Goethe Universitaet Frankfurt
+// SPDX-License-Identifier: EUPL-1.2
+// SPDX-FileContributor: Arne Naegel 
+// SPDX-FileType: SOURCE
 
 #ifndef RICHARDSEQPLUGIN_RICHARDS_EQUATION_H_
 #define RICHARDSEQPLUGIN_RICHARDS_EQUATION_H_

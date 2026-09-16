@@ -1,9 +1,7 @@
-/*
- * richards.h
- *
- *  Created on: 21.12.2019
- *      Author: anaegel
- */
+// SPDX-FileCopyrightText: 2025 Goethe Universitaet Frankfurt
+// SPDX-License-Identifier: EUPL-1.2
+// SPDX-FileContributor: Arne Naegel 
+// SPDX-FileType: SOURCE
 
 
 #ifndef RICHARDS__VAN_GENUCHTEN_H_

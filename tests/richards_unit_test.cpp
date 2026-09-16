@@ -1,4 +1,11 @@
-#include <gtest/gtest.h>
+
+// SPDX-FileCopyrightText: 2025 Goethe Universitaet Frankfurt
+// SPDX-License-Identifier: EUPL-1.2
+// SPDX-FileContributor: Arne Naegel 
+// SPDX-FileType: SOURCE
+
+#include <gtest/gtest.h> // Google test framework.
+// Build with the CMake configuration documented in README.md.
 
 #include "../van_genuchten.h"
 
