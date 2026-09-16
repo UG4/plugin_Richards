@@ -4,7 +4,7 @@
 // SPDX-FileType: SOURCE
 
 #include <boost/test/unit_test.hpp> 		// Boost test framework
-//g++ unit_test.cpp -I/Users/anaegel/Software/third-party/nlohmann/json/include/ -I/Users/anaegel/Software/ug4-git/externals/BoostForUG4/ -std=c++11 -I/Users/anaegel/adolc_base/include -L /Users/anaegel/adolc_base/lib64/ -ladolc
+// Build with the CMake configuration documented in README.md.
 
 
 #include "../van_genuchten.h"      			// Plugin dependencies
