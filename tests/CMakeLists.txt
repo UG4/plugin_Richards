@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Goethe Universitaet Frankfurt
+# SPDX-License-Identifier: EUPL-1.2
+# SPDX-FileContributor: Arne Naegel 
+# SPDX-FileType: SOURCE
+
 # Richards unit tests
 cmake_minimum_required(VERSION 3.16)
 project(RichardsTests LANGUAGES CXX)

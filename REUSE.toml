@@ -5,3 +5,8 @@ version = 1
 path = "*"
 SPDX-FileCopyrightText = "2025 Goethe Universitaet Frankfurt"
 SPDX-License-Identifier = "EUPL-1.2"
+
+[[annotations]]
+path = ".github/**"
+SPDX-FileCopyrightText = "2026 Goethe Universitaet Frankfurt"
+SPDX-License-Identifier = "CC0-1.0"
